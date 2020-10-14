@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="NetSocket.cpp" />
+    <ClCompile Include="Connector.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="NetSocket.h" />
+    <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="Connector.h" />
+    <ClInclude Include="TypeDef.h" />
+  </ItemGroup>
+</Project>
