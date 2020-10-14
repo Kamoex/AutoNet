@@ -182,7 +182,7 @@ namespace AutoNet
                 Close();
             }
 
-            m_pAcceptEx(m_ListenSock, pConnectionData->m_sock, pConnectionData->m_RecvBuf, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
+            m_pAcceptEx(m_ListenSock, pConnectionData->m_sock, pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
 
             if (WSAGetLastError() != WSA_IO_PENDING)
             {
@@ -233,6 +233,12 @@ namespace AutoNet
             if (!GetQueuedCompletionStatus(hCompeltePort, &dwRecv, (PULONG_PTR)&pConData, (LPOVERLAPPED*)&pOverlapped, WSA_INFINITE))
             {
                 INT nError = 0;
+                if (!pConData)
+                {
+                    nError = WSAGetLastError();
+                    printf("WorkThread GetQueuedCompletionStatus error: %d\n", nError == 0 ? GetLastError() : nError);
+                    return -1;
+                }
                 if (FALSE == WSAGetOverlappedResult(pConData->m_sock, pOverlapped, &dwRecv, FALSE, &pConData->m_dwFlags))
                     nError = WSAGetLastError();
 
@@ -311,13 +317,15 @@ namespace AutoNet
         INT nLocalAddrLen = sizeof(sockaddr_in);
         INT nRemoteAddrLen = sizeof(sockaddr_in);
 
-        m_pAcceptExAddrs(pConnectionData->m_RecvBuf, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, (sockaddr**)&pLocalAddr, &nLocalAddrLen, (sockaddr**)&pRemoteAddr, &nRemoteAddrLen);
+        m_pAcceptExAddrs(pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, (sockaddr**)&pLocalAddr, &nLocalAddrLen, (sockaddr**)&pRemoteAddr, &nRemoteAddrLen);
         printf("new client connected! id: %d ip: %s:%d\n", pConnectionData->m_sock, inet_ntoa(pRemoteAddr->sin_addr), ntohs(pRemoteAddr->sin_port));
+
+        // 重置下ringbuf 因为accept的时候没有调用Write 直接写入了
+        pConnectionData->m_pRecvRingBuf->Clear();
 
         pConnectionData->m_nType = EIO_READ;
         WSABUF wsabuf;
-        wsabuf.buf = pConnectionData->m_RecvBuf;
-        wsabuf.len = CONN_BUF_SIZE;// sizeof(pConnection->m_RecvBuf);
+        wsabuf.buf = pConnectionData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
 
         if (WSARecv(pConnectionData->m_sock, &wsabuf, 1, NULL, &pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
         {
@@ -351,17 +359,12 @@ namespace AutoNet
 
         m_pConnector->ProcedureRecvMsg(pConnectionData);
 
-        /*WSABUF wsabuf;
+        WSABUF wsabuf;
         wsabuf.buf = pConnectionData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
         if (wsabuf.len == 0)
         {
             printf("NetSocket::Recv buf overflow \n");
-        }*/
-
-        WSABUF wsabuf;
-        wsabuf.buf = pConnectionData->m_RecvBuf;
-        wsabuf.len = CONN_BUF_SIZE;
-        pConnectionData->m_nType = EIO_READ;
+        }
 
         if (WSARecv(pConnectionData->m_sock, &wsabuf, 1, NULL, &pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
         {
@@ -386,15 +389,12 @@ namespace AutoNet
     }
 
 
-    INT NetSocket::Send(ConnectionData* pConnectionData, CHAR* szBuf, DWORD uLen, DWORD& uSend)
+    INT NetSocket::Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uSend)
     {
         // TODO ASSERT
         if (!pConnectionData)
             return -1;
 
-        WSABUF wsaBuf;
-        wsaBuf.buf = szBuf;
-        wsaBuf.len = uLen;
         pConnectionData->m_nType = EIO_WRITE;
 
         if (WSASend(pConnectionData->m_sock, &wsaBuf, 1, &uSend, pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
@@ -439,7 +439,7 @@ namespace AutoNet
             Close();
         }
 
-        m_pAcceptEx(m_ListenSock, pConnectionData->m_sock, pConnectionData->m_RecvBuf, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
+        m_pAcceptEx(m_ListenSock, pConnectionData->m_sock, pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
 
         if (WSAGetLastError() != WSA_IO_PENDING)
         {

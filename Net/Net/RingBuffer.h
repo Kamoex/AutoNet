@@ -33,33 +33,33 @@ namespace AutoNet
             m_dwUnWriteSize = 0;
         }
 
-        BOOL Write(CHAR* pBuffer, const DWORD nSize)
+        BOOL Write(CHAR* pBuffer, const DWORD dwSize)
         {
-            if (!pBuffer || nSize == 0)
+            if (!pBuffer || dwSize == 0)
                 return false;
 
             if (m_dwUnWriteSize <= 0)
                 return false;
             
-            if (nSize > m_dwUnWriteSize)
+            if (dwSize > m_dwUnWriteSize)
                 return false;
 
-            if (m_pWrite + nSize > m_pEnd)
+            if (m_pWrite + dwSize > m_pEnd)
             {
                 INT nFirstSize = m_pEnd - m_pWrite;
-                INT nSecondSize = nSize - nFirstSize;
+                INT nSecondSize = dwSize - nFirstSize;
                 memcpy(m_pWrite, pBuffer, nFirstSize);
                 memcpy(m_pBuf, pBuffer + nFirstSize, nSecondSize);
                 m_pWrite = m_pBuf + nSecondSize;
             }
             else
             {
-                memcpy(m_pWrite, pBuffer, nSize);
-                m_pWrite = m_pWrite + nSize;
+                memcpy(m_pWrite, pBuffer, dwSize);
+                m_pWrite = m_pWrite + dwSize;
             }
 
-            m_dwUnWriteSize -= nSize;
-            m_dwUnReadSize += nSize;
+            m_dwUnWriteSize -= dwSize;
+            m_dwUnReadSize += dwSize;
             return true;
         }
 
@@ -93,6 +93,34 @@ namespace AutoNet
             return true;
         }
 
+        // 用于直接获取了内存写入的情况
+        BOOL SkipWrite(DWORD dwSize)
+        {
+            if (dwSize == 0)
+                return FALSE;
+
+            if (m_dwUnWriteSize <= 0)
+                return FALSE;
+
+            if (dwSize > m_dwUnWriteSize)
+                return FALSE;
+
+            if (m_pWrite + dwSize > m_pEnd)
+            {
+                INT nFirstSize = m_pEnd - m_pWrite;
+                INT nSecondSize = dwSize - nFirstSize;
+                m_pWrite = m_pBuf + nSecondSize;
+            }
+            else
+            {
+                m_pWrite = m_pWrite + dwSize;
+            }
+
+            m_dwUnWriteSize -= dwSize;
+            m_dwUnReadSize += dwSize;
+            return true;
+        }
+
         CHAR* GetWritePos(DWORD& uLen)
         {
             if (m_dwUnWriteSize == 0)
@@ -101,11 +129,16 @@ namespace AutoNet
                 return NULL;
             }
 
-            if (m_pRead > m_pWrite)
+            if (m_pWrite == m_pEnd)
+            {
+                m_pWrite = m_pBuf;
+            }
+
+            if (m_pWrite < m_pRead)
                 uLen = m_pRead - m_pWrite;
             else
                 uLen = m_pEnd - m_pWrite;
- 
+
             return m_pWrite;
         }
 
@@ -121,6 +154,11 @@ namespace AutoNet
         CHAR* GetBuf()
         {
             return m_pBuf;
+        }
+
+        DWORD GetUnReadSize()
+        {
+            return m_dwUnReadSize;
         }
 
     private:

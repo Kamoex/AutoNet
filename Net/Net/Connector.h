@@ -8,12 +8,7 @@
 namespace AutoNet
 {
 
-#pragma pack(push, 1)
-    struct MsgHead
-    {
-        INT m_nLen;
-    };
-#pragma pack(pop)
+
 
     class Connector
     {

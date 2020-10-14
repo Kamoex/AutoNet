@@ -16,6 +16,18 @@
 namespace AutoNet
 {
 
+#pragma pack(push, 1)
+    struct MsgHead
+    {
+        INT m_nLen;
+
+        void Clear()
+        {
+            m_nLen = 0;
+        }
+    };
+#pragma pack(pop)
+
     enum EIOTYPE
     {
         EIO_NULL,
@@ -34,9 +46,9 @@ namespace AutoNet
         DWORD m_dwFlags;
         CHAR m_RecvBuf[CONN_BUF_SIZE];
         CHAR m_SendBuf[CONN_BUF_SIZE];
-        INT m_nNeedSend;
-        INT m_nSended;
 
+        MsgHead* m_pMsgHead;
+        DWORD m_dwMsgBodyRecved;
         RingBuffer* m_pRecvRingBuf;
         RingBuffer* m_pSendRingBuf;
         SOCKET m_sock;
@@ -44,15 +56,32 @@ namespace AutoNet
 
         ConnectionData()
         {
-            ZeroMemory(this, sizeof(ConnectionData));
             m_pRecvRingBuf = new RingBuffer(CONN_BUF_SIZE);
             m_pSendRingBuf = new RingBuffer(CONN_BUF_SIZE);
+            m_pMsgHead = new MsgHead;
+            CleanUp();
+        }
+        
+        ~ConnectionData()
+        {
         }
 
         void CleanUp()
         {
             closesocket(m_sock);
-            ZeroMemory(this, sizeof(ConnectionData));
+            ZeroMemory(&m_overlapped, sizeof(m_overlapped));
+            ZeroMemory(&m_addr, sizeof(m_addr));
+            ZeroMemory(&m_RecvBuf, sizeof(m_RecvBuf));
+            ZeroMemory(&m_SendBuf, sizeof(m_SendBuf));
+            m_pMsgHead->Clear();
+            m_pRecvRingBuf->Clear();
+            m_pSendRingBuf->Clear();
+
+            m_uID = 0;
+            m_nType = 0;
+            m_dwRecved = 0;
+            m_dwFlags = 0;
+            m_dwMsgBodyRecved = 0;
         }
     };
 
@@ -95,7 +124,7 @@ namespace AutoNet
 
         INT  Recv(ConnectionData* pConnectionData);
 
-        INT  Send(ConnectionData* pConnectionData, CHAR* szBuf, DWORD uLen, DWORD& uSend);
+        INT  Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uSend);
 
         void Kick(ConnectionData* pConnectionData);
 
