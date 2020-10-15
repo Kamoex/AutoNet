@@ -291,6 +291,8 @@ namespace AutoNet
             }
             case EIO_WRITE:
             {
+                // 已经发送完成 将此线程的状态设置为可接收
+                pConData->m_nType = EIO_READ;
                 break;
             }
             default:
@@ -395,6 +397,7 @@ namespace AutoNet
         if (!pConnectionData)
             return -1;
 
+        // 这里需要设置下类型 如果不设置 则自己会收给对方到发送的数据(因为此时还未发送完成,会导致其他线程从缓存区里读取到数据)
         pConnectionData->m_nType = EIO_WRITE;
 
         if (WSASend(pConnectionData->m_sock, &wsaBuf, 1, &uSend, pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)

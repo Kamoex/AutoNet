@@ -158,10 +158,11 @@ namespace AutoNet
             pConnectionData->m_dwMsgBodyRecved -= nMsgLen;
             nMsgLen = 0;
 
-            /*static const INT MSGSIZE = 10;
-            char sendbuf[MSGSIZE][MSGSIZE] = {};
+            /*static const INT MSGSIZE1 = 1;
+            static const INT MSGSIZE = 10;
+            char sendbuf[MSGSIZE1][MSGSIZE] = {};
             int nTemp = 0;
-            for (int i = 0; i < MSGSIZE; i++)
+            for (int i = 0; i < MSGSIZE1; i++)
             {
                 ZeroMemory(sendbuf[i], MSGSIZE);
                 for (int j = 0; j < MSGSIZE; j++)
