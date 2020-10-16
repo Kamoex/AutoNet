@@ -9,5 +9,6 @@
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Connector.h" />
     <ClInclude Include="TypeDef.h" />
+    <ClInclude Include="Assert.h" />
   </ItemGroup>
 </Project>

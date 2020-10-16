@@ -274,10 +274,10 @@ namespace AutoNet
             }
             case EIO_READ:
             {
-                if (dwRecv >= CONN_BUF_SIZE)
+                if (dwRecv > CONN_BUF_SIZE)
                 {
                     printf("Recv msg over the limit. max: %d, recv: %d\n", CONN_BUF_SIZE, dwRecv);
-                    pConData->CleanUp();
+                    pNetSocket->Kick(pConData);
                     return -1;
                 }
 
@@ -378,14 +378,6 @@ namespace AutoNet
                 return -1;
             }
         }
-
-        /*static INT nn = 0;
-        CHAR toClient[32] = {};
-        sprintf_s(toClient, "hello client %d", ++nn);
-        memcpy(pConnection->m_SendBuf, toClient, sizeof(toClient));
-        pConnection->m_nNeedSend = sizeof(toClient);
-
-        pNetSocket->SendMsg(pConnection);*/
 
         return 0;
     }

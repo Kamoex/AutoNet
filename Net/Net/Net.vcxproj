@@ -26,6 +26,7 @@
     <ClInclude Include="Connector.h" />
     <ClInclude Include="NetSocket.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="Assert.h" />
     <ClInclude Include="TypeDef.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

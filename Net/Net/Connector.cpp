@@ -121,6 +121,9 @@ namespace AutoNet
 
         pConnectionData->m_pRecvRingBuf->SkipWrite(pConnectionData->m_dwRecved);
 
+        INT& nMsgLen = pConnectionData->m_pMsgHead->m_nLen;
+        pConnectionData->m_dwMsgBodyRecved += pConnectionData->m_dwRecved;
+
         while (true)
         {
             if (!pConnectionData->m_pMsgHead)
@@ -128,9 +131,6 @@ namespace AutoNet
                 printf("Connector::ProcedureRecvMsg pConnectionData->m_pMsgHead is null \n");
                 break;
             }
-
-            INT& nMsgLen = pConnectionData->m_pMsgHead->m_nLen;
-            pConnectionData->m_dwMsgBodyRecved += pConnectionData->m_dwRecved;
 
             // 检测消息头是否需要解析
             if (nMsgLen == 0)
@@ -173,6 +173,9 @@ namespace AutoNet
                 pConnectionData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
                 SendMsg(pConnectionData->m_uID);
             }*/
+
+            if (pConnectionData->m_dwMsgBodyRecved == 0)
+                break;
         }
 
         ZeroMemory(pConnectionData->m_RecvBuf, CONN_BUF_SIZE);

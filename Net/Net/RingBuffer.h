@@ -68,10 +68,10 @@ namespace AutoNet
             if (!pBuf || nSize == 0)
                 return FALSE;
 
-            if (m_dwUnReadSize < nSize)
+            if (m_dwUnReadSize <= 0)
                 return FALSE;
 
-            if (m_dwUnReadSize > m_dwUnWriteSize)
+            if (nSize > m_dwUnReadSize)
                 return FALSE;
 
             if (m_pRead + nSize > m_pEnd)
