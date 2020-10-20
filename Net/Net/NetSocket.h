@@ -7,6 +7,7 @@
 #include <map>
 #include "RingBuffer.h"
 #include "TypeDef.h"
+#include "Net.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -112,7 +113,7 @@ namespace AutoNet
         NetSocket() {};
         ~NetSocket();
 
-        BOOL Init(Connector* pConnector, WORD uPort, CHAR* szIP, INT nMaxSessions);
+        BOOL Init(INet* pNet, WORD uPort, CHAR* szIP, INT nMaxSessions);
 
         BOOL Start(DWORD nThreadNum = 0);
 
@@ -132,7 +133,7 @@ namespace AutoNet
 
         void HandleError(const CHAR* szErr);
     public:
-        inline Connector* GetConnector() { return m_pConnector; }
+        inline INet* GetConnector() { return m_pNet; }
     public:
         inline HANDLE GetCompletHandle() { return m_completHandle; }
         inline SOCKET& GetListenSocket() { return m_ListenSock; }
@@ -141,8 +142,6 @@ namespace AutoNet
     private:
         WORD                        m_uPort;
         std::string                 m_szIP;
-        BOOL                        m_bIsInit;
-
 
         WORD                        m_WSAVersion;
         WSADATA                     m_WSAData;
@@ -153,7 +152,7 @@ namespace AutoNet
         LPFN_GETACCEPTEXSOCKADDRS   m_pAcceptExAddrs;           // acceptexaddr函数指针
         std::vector<HANDLE>         m_vecWorkThread;            // worker线程
         INT                         m_nMaxConnectionsNums;      // 最大连接数量
-        Connector*                  m_pConnector;               
+        INet*                       m_pNet;
 
     private:
         FSocketOpt m_operation;

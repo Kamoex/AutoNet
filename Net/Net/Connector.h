@@ -8,9 +8,7 @@
 namespace AutoNet
 {
 
-
-
-    class Connector
+    class Connector : public INet
     {
         friend class NetSocket;
     public:
@@ -24,17 +22,22 @@ namespace AutoNet
 
         void Start();
 
-        void OnAccept(ConnectionData* pConnectionData);
-        
-        void Kick(ConnectionData* pConnectionData);
+        void OnAccept(ConnectionData* pData) override;
 
-        void BroadcastMsg();
+        void OnConnected() override {};
+        
+        void Kick(ConnectionData* pConnectionData) override;
+
+        void ProcCmd();
 
         void SendMsg(SESSION_ID uID);
 
-        void ProcedureRecvMsg(ConnectionData* pConnectionData);
+        void OnRecved(ConnectionData* pConnectionData) override;
+
+        void OnSended(ConnectionData* pData) override {};
 
         void CleanUp();
+
     private:
         NetSocket                               m_Socket;
         ConnectionData*                         m_pData;

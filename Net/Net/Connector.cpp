@@ -5,9 +5,10 @@ namespace AutoNet
 {
     Connector::Connector()
     {
-        m_pData = new ConnectionData;
+        m_pData = NULL;
         m_nIncrement = 0;
     }
+
     Connector::~Connector()
     {
         SAFE_DELETE(m_pData);
@@ -32,18 +33,17 @@ namespace AutoNet
         printf("server start!\n");
     }
 
-    void Connector::OnAccept(ConnectionData* pConnectionData)
+    void Connector::OnAccept(ConnectionData* pData)
     {
-        if (!pConnectionData)
+        if (!pData)
         {
             // TODO ASSERT
             return;
         }
 
         SESSION_ID uID = ++m_nIncrement;
-        m_mapConnections[uID] = pConnectionData;
-        pConnectionData->m_uID = uID;
-       
+        m_mapConnections[uID] = pData;
+        pData->m_uID = uID;
 
         // TODO DEBUG
         printf("a new client connected!!! id: %d\n", uID);
@@ -61,6 +61,11 @@ namespace AutoNet
 
         // TODO DEBUG
         printf("client kicked!!! id: %d \n", pConnectionData->m_uID);
+    }
+
+    void Connector::ProcCmd()
+    {
+
     }
 
     void Connector::SendMsg(SESSION_ID uID)
@@ -111,7 +116,7 @@ namespace AutoNet
         }
     }
 
-    void Connector::ProcedureRecvMsg(ConnectionData* pConnectionData)
+    void Connector::OnRecved(ConnectionData* pConnectionData)
     {
         if (!pConnectionData->m_pRecvRingBuf)
         {
@@ -185,5 +190,6 @@ namespace AutoNet
     {
         m_Socket.CleanUp();
     }
+
 }
 

@@ -4,6 +4,7 @@
 #include "NetSocket.h"
 #include "TypeDef.h"
 #include "Connector.h"
+#include "BaseServer.h"
 
 namespace AutoNet
 {
@@ -26,15 +27,15 @@ namespace AutoNet
         m_nMaxConnectionsNums = 0;
         m_pAcceptEx = NULL;
         m_pAcceptExAddrs = NULL;
-        m_pConnector = NULL;
+        m_pNet = NULL;
         m_vecWorkThread.clear();
         m_operation.CleanUp();
-
+        
         ZeroMemory(&m_Addr, sizeof(m_Addr));
         ZeroMemory(&m_WSAData, sizeof(m_WSAData));
     }
 
-    BOOL NetSocket::Init(Connector* pConnector, WORD uPort, CHAR* szIP, INT nMaxSessions)
+    BOOL NetSocket::Init(INet* pNet, WORD uPort, CHAR* szIP, INT nMaxSessions)
     {
         if (nMaxSessions <= 0 || nMaxSessions > MAX_SESSIONS)
         {
@@ -45,14 +46,14 @@ namespace AutoNet
         m_nMaxConnectionsNums = nMaxSessions;
         m_operation.Init();
 
-        if (!pConnector)
+        if (!pNet)
         {
             return false;
         }
 
         m_uPort = uPort;
         m_szIP = szIP;
-        m_pConnector = pConnector;
+        m_pNet = pNet;
 
         m_WSAVersion = MAKEWORD(2, 2);
         INT nResult = WSAStartup(m_WSAVersion, &m_WSAData);
@@ -89,8 +90,6 @@ namespace AutoNet
             return false;
         }
         
-        m_bIsInit = true;
-
         return true;
     }
 
@@ -216,8 +215,8 @@ namespace AutoNet
             return -1;
         }
 
-        Connector* pConnector = pNetSocket->GetConnector();
-        if (!pConnector)
+        INet* pNet = pNetSocket->GetConnector();
+        if (!pNet)
         {
             // TODO ASSERT
             printf("WorkThread WorkThread pConnector is null!!! \n");
@@ -347,7 +346,7 @@ namespace AutoNet
             return -1;
         }
 
-        m_pConnector->OnAccept(pConnectionData);
+        m_pNet->OnAccept(pConnectionData);
 
         return 0;
     }
@@ -359,7 +358,7 @@ namespace AutoNet
             return -1;
         }
 
-        m_pConnector->ProcedureRecvMsg(pConnectionData);
+        m_pNet->OnRecved(pConnectionData);
 
         WSABUF wsabuf;
         wsabuf.buf = pConnectionData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
@@ -412,7 +411,7 @@ namespace AutoNet
         if (!pConnectionData)
             return;
 
-        m_pConnector->Kick(pConnectionData);
+        m_pNet->Kick(pConnectionData);
      
         ResetConnectionData(pConnectionData);
     }
@@ -450,9 +449,9 @@ namespace AutoNet
 
 INT main()
 {
-    AutoNet::Connector server;
-    server.Init(8001, "", 1);
-    server.Start();
+    AutoNet::BaseServer server(8001, "", 1);
+    server.Init();
+    server.Run();
     while (true)
     {
 
