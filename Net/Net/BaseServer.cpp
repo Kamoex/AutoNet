@@ -2,7 +2,7 @@
 
 namespace AutoNet
 {
-    BaseServer::BaseServer(WORD uPort, CHAR* szIP, INT nMaxSessions /*= MAX_SESSIONS*/)
+    BaseServer::BaseServer(CHAR* szIP, WORD uPort, INT nMaxSessions /*= MAX_SESSIONS*/)
     {
         m_uPort = uPort;
         m_strIP = szIP;
@@ -23,7 +23,7 @@ namespace AutoNet
 
     BOOL BaseServer::Run()
     {
-        if (m_Socket.Start())
+        if (m_Socket.StartListen())
             return FALSE;
 
         while (true)

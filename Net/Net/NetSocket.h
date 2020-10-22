@@ -32,6 +32,7 @@ namespace AutoNet
     enum EIOTYPE
     {
         EIO_NULL,
+        EIO_CONNECT,
         EIO_ACCEPT,
         EIO_READ,
         EIO_WRITE,
@@ -44,6 +45,7 @@ namespace AutoNet
         INT m_nType;
 
         DWORD m_dwRecved;
+        DWORD m_dwSended;
         DWORD m_dwFlags;
         CHAR m_RecvBuf[CONN_BUF_SIZE];
         CHAR m_SendBuf[CONN_BUF_SIZE];
@@ -70,6 +72,7 @@ namespace AutoNet
         void CleanUp()
         {
             closesocket(m_sock);
+            m_sock = INVALID_SOCKET;
             ZeroMemory(&m_overlapped, sizeof(m_overlapped));
             ZeroMemory(&m_addr, sizeof(m_addr));
             ZeroMemory(&m_RecvBuf, sizeof(m_RecvBuf));
@@ -81,6 +84,7 @@ namespace AutoNet
             m_uID = 0;
             m_nType = 0;
             m_dwRecved = 0;
+            m_dwSended = 0;
             m_dwFlags = 0;
             m_dwMsgBodyRecved = 0;
         }
@@ -100,8 +104,8 @@ namespace AutoNet
 
         void CleanUp()
         {
-            m_bReuseAddr = false;
-            m_bDontLinger = false;
+            m_bReuseAddr = FALSE;
+            m_bDontLinger = FALSE;
         }
     };
     
@@ -115,17 +119,23 @@ namespace AutoNet
 
         BOOL Init(INet* pNet, WORD uPort, CHAR* szIP, INT nMaxSessions);
 
-        BOOL Start(DWORD nThreadNum = 0);
+        BOOL StartListen(DWORD nThreadNum = 0);
+
+        BOOL StartConnect();
 
         BOOL Close();
 
         void CleanUp();
 
-        INT  Accept(ConnectionData* pConnectionData);
+        INT  OnConnected(ConnectionData* pConnectionData);
+
+        INT  OnAccepted(ConnectionData* pConnectionData);
 
         INT  Recv(ConnectionData* pConnectionData);
 
-        INT  Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uSend);
+        INT  OnRecved(ConnectionData* pConnectionData);
+
+        INT  Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uTransBytes);
 
         void Kick(ConnectionData* pConnectionData);
 
@@ -133,13 +143,15 @@ namespace AutoNet
 
         void HandleError(const CHAR* szErr);
     public:
-        inline INet* GetConnector() { return m_pNet; }
+        inline INet* GetNet() { return m_pNet; }
+        inline const CHAR* GetTargetIP() { return m_szIP.c_str(); }
+        inline WORD GetTargetPort() { return m_uPort; }
     public:
         inline HANDLE GetCompletHandle() { return m_completHandle; }
         inline SOCKET& GetListenSocket() { return m_ListenSock; }
         inline FSocketOpt& GetSocketOpt() { return m_operation; }
         inline LPFN_GETACCEPTEXSOCKADDRS GetPtrAcceptExSockAddrsFun() { return m_pAcceptExAddrs; }
-    private:
+    public:
         WORD                        m_uPort;
         std::string                 m_szIP;
 
@@ -150,6 +162,7 @@ namespace AutoNet
         HANDLE                      m_completHandle;            // 完成端口句柄
         LPFN_ACCEPTEX               m_pAcceptEx;                // acceptex函数指针
         LPFN_GETACCEPTEXSOCKADDRS   m_pAcceptExAddrs;           // acceptexaddr函数指针
+        LPFN_CONNECTEX              m_pConnectEx;               // connectex函数指针
         std::vector<HANDLE>         m_vecWorkThread;            // worker线程
         INT                         m_nMaxConnectionsNums;      // 最大连接数量
         INet*                       m_pNet;

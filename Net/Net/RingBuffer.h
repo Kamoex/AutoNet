@@ -36,13 +36,13 @@ namespace AutoNet
         BOOL Write(CHAR* pBuffer, const DWORD dwSize)
         {
             if (!pBuffer || dwSize == 0)
-                return false;
+                return FALSE;
 
             if (m_dwUnWriteSize <= 0)
-                return false;
+                return FALSE;
             
             if (dwSize > m_dwUnWriteSize)
-                return false;
+                return FALSE;
 
             if (m_pWrite + dwSize > m_pEnd)
             {

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClCompile Include="NetSocket.cpp" />
     <ClCompile Include="Connector.cpp" />
+    <ClCompile Include="BaseServer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetSocket.h" />
@@ -10,5 +11,7 @@
     <ClInclude Include="Connector.h" />
     <ClInclude Include="TypeDef.h" />
     <ClInclude Include="Assert.h" />
+    <ClInclude Include="BaseServer.h" />
+    <ClInclude Include="Net.h" />
   </ItemGroup>
 </Project>

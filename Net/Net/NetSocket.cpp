@@ -27,6 +27,7 @@ namespace AutoNet
         m_nMaxConnectionsNums = 0;
         m_pAcceptEx = NULL;
         m_pAcceptExAddrs = NULL;
+        m_pConnectEx = NULL;
         m_pNet = NULL;
         m_vecWorkThread.clear();
         m_operation.CleanUp();
@@ -39,7 +40,7 @@ namespace AutoNet
     {
         if (nMaxSessions <= 0 || nMaxSessions > MAX_SESSIONS)
         {
-            return false;
+            return FALSE;
         }
 
         CleanUp();
@@ -48,7 +49,7 @@ namespace AutoNet
 
         if (!pNet)
         {
-            return false;
+            return FALSE;
         }
 
         m_uPort = uPort;
@@ -62,7 +63,7 @@ namespace AutoNet
             // TODO ASSERT
             printf("WSAStartup error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
         // TODO IPV6
         m_Addr.sin_family = AF_INET;
@@ -78,7 +79,7 @@ namespace AutoNet
             // TODO ASSERT
             printf("WSASocket error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
 
         // 端口重用(防止closesocket以后 当前连接会产生time-waite状态(会持续1-2分钟) 导致重新绑定时会提示address alredy in use)
@@ -87,13 +88,13 @@ namespace AutoNet
             // TODO ASSERT
             printf("setsockopt set SO_REUSEADDR error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
         
         return true;
     }
 
-    BOOL NetSocket::Start(DWORD nThreadNum /*= 0*/)
+    BOOL NetSocket::StartListen(DWORD nThreadNum /*= 0*/)
     {
         // SO_REUSEPORT 多个进程或线程绑定同一IP端口 由内核负载均衡 防止惊群效应
         //setsockopt(m_Sock, SOL_SOCKET, SO_REUSEPORT, (const CHAR*)&nReuseAddr, sizeof(nReuseAddr))
@@ -104,9 +105,9 @@ namespace AutoNet
         if (::bind(m_ListenSock, (const sockaddr*)&m_Addr, sizeof(sockaddr)) == SOCKET_ERROR)
         {
             // TODO ASSERT
-            printf("bind error: %d\n", WSAGetLastError());
+            printf("StartListen bind error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
 
         if (::listen(m_ListenSock, SOMAXCONN_HINT(1)) == SOCKET_ERROR)
@@ -114,21 +115,28 @@ namespace AutoNet
             // TODO ASSERT
             printf("listen error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
         
         // 投递监听
-        CreateIoCompletionPort((HANDLE)m_ListenSock, m_completHandle, 0, 0);
+        if (CreateIoCompletionPort((HANDLE)m_ListenSock, m_completHandle, 0, 0) == NULL)
+        {
+            // TODO ASSERT
+            printf("StartListen CreateIoCompletionPort error: %d\n", GetLastError());
+            Close();
+            return FALSE;
+        }
 
         // 获取acceptex指针
         GUID GuidAcceptEx = WSAID_ACCEPTEX;
         DWORD dwAccepteExBytes = 0;
+
         if (WSAIoctl(m_ListenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidAcceptEx, sizeof(GuidAcceptEx), &m_pAcceptEx, sizeof(m_pAcceptEx), &dwAccepteExBytes, NULL, NULL) == SOCKET_ERROR)
         {
             // TODO ASSERT
             printf("WSAIoctl get AcceptEx error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
         // 获取acceptexAddr指针 获取remoteaddr时 不用自己再去解析acceptex的缓冲区
         GUID GuidAddrEx = WSAID_GETACCEPTEXSOCKADDRS;
@@ -138,14 +146,14 @@ namespace AutoNet
             // TODO ASSERT
             printf("WSAIoctl get AddrEx error: %d\n", WSAGetLastError());
             Close();
-            return false;
+            return FALSE;
         }
 
         if (!m_pAcceptEx)
         {
             // TODO ASSERT
             assert(NULL);
-            return false;
+            return FALSE;
         }
 
         if (nThreadNum == 0)
@@ -162,7 +170,7 @@ namespace AutoNet
             {
                 // TODO ASSERT
                 printf("CreateThread error!");
-                return false;
+                return FALSE;
             }
             m_vecWorkThread.push_back(nThreadID);
         }
@@ -182,19 +190,89 @@ namespace AutoNet
             }
 
             m_pAcceptEx(m_ListenSock, pConnectionData->m_sock, pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
-
             if (WSAGetLastError() != WSA_IO_PENDING)
             {
                 // TODO ASSERT
                 printf("RunAccept AcceptEx error: %d\n", WSAGetLastError());
                 Close();
-                return false;
+                return FALSE;
             }
-
-            //CreateIoCompletionPort((HANDLE)connetion.m_sock, m_completHandle, (ULONG_PTR)&connetion, 0);
         }
 
         return true;
+    }
+
+    BOOL NetSocket::StartConnect()
+    {
+        // 创建完成端口
+        m_completHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+        if (m_completHandle == INVALID_HANDLE_VALUE)
+        {
+            // TODO ASSERT
+            printf("NetSocket::StartConnect CreateIoCompletionPort error: %d\n", WSAGetLastError());
+            Close();
+            return FALSE;
+        }
+
+        // 需要给本地socket绑定一个addr（不可以绑定server端的addr信息,因为这是你本机的socket,需要绑定你本机的信息）
+        SOCKADDR_IN temp;
+        temp.sin_family = AF_INET;
+        temp.sin_port = htons(0);
+        //temp.sin_addr.s_addr = htonl(ADDR_ANY);
+        temp.sin_addr.s_addr = inet_addr("127.0.0.1");
+        if (::bind(m_ListenSock, (const sockaddr*)&temp, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+        {
+            // TODO ASSERT
+            printf("NetSocket::StartConnect bind error: %d\n", WSAGetLastError());
+            Close();
+            return FALSE;
+        }
+
+        GUID GuidConnectEx = WSAID_CONNECTEX;
+        DWORD dwConnectExBytes = 0;
+        if (WSAIoctl(m_ListenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidConnectEx, sizeof(GuidConnectEx), &m_pConnectEx, sizeof(m_pConnectEx), &dwConnectExBytes, NULL, NULL) == SOCKET_ERROR)
+        {
+            // TODO ASSERT
+            printf("WSAIoctl get ConnectEx error: %d\n", WSAGetLastError());
+            Close();
+            return FALSE;
+        }
+
+        HANDLE nThreadID = CreateThread(NULL, NULL, WorkThread, this, NULL, NULL);
+        if (nThreadID == NULL)
+        {
+            // TODO ASSERT
+            printf("CreateThread error!");
+            return FALSE;
+        }
+
+        m_vecWorkThread.push_back(nThreadID);
+
+        // TODO从对象池中取
+        ConnectionData* pData = new ConnectionData;
+        pData->m_nType = EIO_CONNECT;
+        pData->m_sock = m_ListenSock;
+
+        // 投递监听
+        if (CreateIoCompletionPort((HANDLE)m_ListenSock, m_completHandle, (ULONG_PTR)pData, 0) == NULL)
+        {
+            // TODO ASSERT
+            printf("StartConnect CreateIoCompletionPort error: %d\n", GetLastError());
+            return FALSE;
+        }
+
+        if (!m_pConnectEx(m_ListenSock, (const sockaddr*)&m_Addr, sizeof(SOCKADDR_IN), NULL, 0, &pData->m_dwSended, (OVERLAPPED*)&pData->m_overlapped))
+        {
+            if (WSAGetLastError() != WSA_IO_PENDING)
+            {
+                // TODO ASSERT
+                printf("NetSocket::StartConnect error: %d\n", WSAGetLastError());
+                Close();
+                return FALSE;
+            }
+        }
+
+        return TRUE;
     }
 
     BOOL NetSocket::Close()
@@ -215,7 +293,7 @@ namespace AutoNet
             return -1;
         }
 
-        INet* pNet = pNetSocket->GetConnector();
+        INet* pNet = pNetSocket->GetNet();
         if (!pNet)
         {
             // TODO ASSERT
@@ -228,8 +306,8 @@ namespace AutoNet
             HANDLE hCompeltePort = pNetSocket->GetCompletHandle();
             ConnectionData* pConData = NULL;
             OVERLAPPED* pOverlapped = NULL;
-            DWORD dwRecv = 0;
-            if (!GetQueuedCompletionStatus(hCompeltePort, &dwRecv, (PULONG_PTR)&pConData, (LPOVERLAPPED*)&pOverlapped, WSA_INFINITE))
+            DWORD dwTransBytes = 0;
+            if (!GetQueuedCompletionStatus(hCompeltePort, &dwTransBytes, (PULONG_PTR)&pConData, (LPOVERLAPPED*)&pOverlapped, WSA_INFINITE))
             {
                 INT nError = 0;
                 if (!pConData)
@@ -238,7 +316,8 @@ namespace AutoNet
                     printf("WorkThread GetQueuedCompletionStatus error: %d\n", nError == 0 ? GetLastError() : nError);
                     return -1;
                 }
-                if (FALSE == WSAGetOverlappedResult(pConData->m_sock, pOverlapped, &dwRecv, FALSE, &pConData->m_dwFlags))
+                //if (FALSE == WSAGetOverlappedResult(pConData->m_sock, pOverlapped, &dwTransBytes, FALSE, &pConData->m_dwFlags))
+                if (FALSE == WSAGetOverlappedResult(pNetSocket->GetListenSocket(), pOverlapped, &dwTransBytes, FALSE, &pConData->m_dwFlags))
                     nError = WSAGetLastError();
 
                 // 连接端被强制断开
@@ -262,34 +341,46 @@ namespace AutoNet
                 return -1;
             }
 
-            pConData->m_dwRecved = dwRecv;
-
             switch (pConData->m_nType)
             {
+            case EIO_CONNECT:
+            {
+                pNetSocket->OnConnected(pConData);
+                break;
+            }
             case EIO_ACCEPT:
             {
-                pNetSocket->Accept(pConData);
+                pNetSocket->OnAccepted(pConData);
                 break;
             }
             case EIO_READ:
             {
-                if (dwRecv > CONN_BUF_SIZE)
+                pConData->m_dwRecved = dwTransBytes;
+                if (dwTransBytes > CONN_BUF_SIZE)
                 {
-                    printf("Recv msg over the limit. max: %d, recv: %d\n", CONN_BUF_SIZE, dwRecv);
+                    printf("Recv msg over the limit. max: %d, recv: %d\n", CONN_BUF_SIZE, dwTransBytes);
                     pNetSocket->Kick(pConData);
                     return -1;
                 }
 
                 // 连接端已断开连接
-                if (dwRecv == 0)
+                if (dwTransBytes == 0)
                     pNetSocket->Kick(pConData);
                 else
-                    pNetSocket->Recv(pConData);
+                    pNetSocket->OnRecved(pConData);
 
                 break;
             }
             case EIO_WRITE:
             {
+                pConData->m_dwSended = dwTransBytes;
+                if (dwTransBytes == 0)
+                {
+                    printf("Send msg error. sendBytes: %d \n", dwTransBytes);
+                    pNetSocket->Kick(pConData);
+                    return -1;
+                }
+                pNet->OnSended(pConData);
                 // 已经发送完成 将此线程的状态设置为可接收
                 pConData->m_nType = EIO_READ;
                 break;
@@ -303,7 +394,18 @@ namespace AutoNet
         return 0;
     }
 
-    INT NetSocket::Accept(ConnectionData* pConnectionData)
+    INT NetSocket::OnConnected(ConnectionData* pConnectionData)
+    {
+        // 更新socket相关属性 否则getpeername会取不到正确内容
+        setsockopt(m_ListenSock, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+
+        m_pNet->OnConnected(pConnectionData);
+
+        Recv(pConnectionData);
+        return 0;
+    }
+
+    INT NetSocket::OnAccepted(ConnectionData* pConnectionData)
     {
         // TODO ASSERT
         if (!pConnectionData)
@@ -324,34 +426,14 @@ namespace AutoNet
         // 重置下ringbuf 因为accept的时候没有调用Write 直接写入了
         pConnectionData->m_pRecvRingBuf->Clear();
 
-        pConnectionData->m_nType = EIO_READ;
-        WSABUF wsabuf;
-        wsabuf.buf = pConnectionData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
-
-        if (WSARecv(pConnectionData->m_sock, &wsabuf, 1, NULL, &pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
-        {
-            if (WSA_IO_PENDING != WSAGetLastError())
-            {
-                // TODO ASSERT
-                printf("EIO_ACCEPT WSARecv error: %d\n", WSAGetLastError());
-                Kick(pConnectionData);
-                return -1;
-            }
-        }
-        if (CreateIoCompletionPort((HANDLE)pConnectionData->m_sock, m_completHandle, (ULONG_PTR)pConnectionData, 0) == NULL)
-        {
-            // TODO ASSERT
-            printf("EIO_ACCEPT CreateIoCompletionPort error: %d\n", WSAGetLastError());
-            Kick(pConnectionData);
-            return -1;
-        }
-
         m_pNet->OnAccept(pConnectionData);
+
+        Recv(pConnectionData);
 
         return 0;
     }
 
-    INT NetSocket::Recv(ConnectionData* pConnectionData)
+    INT NetSocket::OnRecved(ConnectionData* pConnectionData)
     {
         if (!pConnectionData)
         {
@@ -382,7 +464,7 @@ namespace AutoNet
     }
 
 
-    INT NetSocket::Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uSend)
+    INT NetSocket::Send(ConnectionData* pConnectionData, WSABUF& wsaBuf, DWORD& uTransBytes)
     {
         // TODO ASSERT
         if (!pConnectionData)
@@ -391,12 +473,41 @@ namespace AutoNet
         // 这里需要设置下类型 如果不设置 则自己会收给对方到发送的数据(因为此时还未发送完成,会导致其他线程从缓存区里读取到数据)
         pConnectionData->m_nType = EIO_WRITE;
 
-        if (WSASend(pConnectionData->m_sock, &wsaBuf, 1, &uSend, pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
+        if (WSASend(pConnectionData->m_sock, &wsaBuf, 1, &uTransBytes, pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
         {
             if (WSA_IO_PENDING != WSAGetLastError())
             {
                 // TODO ASSERT
                 printf("EIO_READ WSASend error: %d\n", WSAGetLastError());
+                Kick(pConnectionData);
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    INT NetSocket::Recv(ConnectionData* pConnectionData)
+    {
+        pConnectionData->m_nType = EIO_READ;
+        WSABUF wsabuf;
+        wsabuf.buf = pConnectionData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
+
+        // 投递监听
+        if (CreateIoCompletionPort((HANDLE)pConnectionData->m_sock, m_completHandle, (ULONG_PTR)pConnectionData, 0) == NULL)
+        {
+            // TODO ASSERT
+            printf("EIO_ACCEPT CreateIoCompletionPort error: %d\n", WSAGetLastError());
+            Kick(pConnectionData);
+            return -1;
+        }
+
+        if (WSARecv(pConnectionData->m_sock, &wsabuf, 1, NULL, &pConnectionData->m_dwFlags, &pConnectionData->m_overlapped, NULL) != 0)
+        {
+            if (WSA_IO_PENDING != WSAGetLastError())
+            {
+                // TODO ASSERT
+                printf("EIO_ACCEPT WSARecv error: %d\n", WSAGetLastError());
                 Kick(pConnectionData);
                 return -1;
             }
@@ -449,12 +560,27 @@ namespace AutoNet
 
 INT main()
 {
-    AutoNet::BaseServer server(8001, "", 1);
-    server.Init();
-    server.Run();
-    while (true)
+    if (1)
     {
+        AutoNet::BaseServer server("", 8001, 10);
+        server.Init();
+        server.Run();
+        while (true)
+        {
 
+        }
     }
+    else
+    {
+        AutoNet::Connector connertor;
+        connertor.Init("127.0.0.1", 8001);
+        connertor.Connect();
+        //WaitForSingleObject(connertor.GetNetSocket()->m_vecWorkThread[0], INFINITE);
+        while (true)
+        {
+
+        }
+    }
+    
     return 0;
 }

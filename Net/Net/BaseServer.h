@@ -9,7 +9,7 @@ namespace AutoNet
     class BaseServer : public INet
     {
     public:
-        BaseServer(WORD uPort, CHAR* szIP, INT nMaxSessions = MAX_SESSIONS);
+        BaseServer(CHAR* szIP, WORD uPort, INT nMaxSessions = MAX_SESSIONS);
         ~BaseServer();
 
     public:
@@ -19,7 +19,7 @@ namespace AutoNet
 
         void OnAccept(ConnectionData* pData) override;
 
-        void OnConnected()                   override {};
+        void OnConnected(ConnectionData* pConnectionData) override {};
 
         void OnRecved(ConnectionData* pData) override;
 

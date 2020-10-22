@@ -8,7 +8,7 @@ namespace AutoNet
     {
         virtual void OnAccept(ConnectionData* pData) = 0;
 
-        virtual void OnConnected() = 0;
+        virtual void OnConnected(ConnectionData* pConnectionData) = 0;
 
         virtual void OnRecved(ConnectionData* pData) = 0;
 

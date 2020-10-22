@@ -19,11 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BaseServer.cpp" />
     <ClCompile Include="Connector.cpp" />
     <ClCompile Include="NetSocket.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BaseServer.h" />
     <ClInclude Include="Connector.h" />
+    <ClInclude Include="Net.h" />
     <ClInclude Include="NetSocket.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="Assert.h" />

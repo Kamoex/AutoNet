@@ -3,6 +3,9 @@
 
 namespace AutoNet
 {
+#define FALSE 0
+#define TRUE  1
+
     typedef char                CHAR;
     typedef short               SHORT;
     typedef int                 INT;
