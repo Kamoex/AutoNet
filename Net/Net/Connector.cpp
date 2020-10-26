@@ -1,5 +1,6 @@
 #include "Connector.h"
 #include "NetSocket.h"
+#include "Assert.h"
 
 namespace AutoNet
 {
@@ -97,26 +98,22 @@ namespace AutoNet
 
     void Connector::OnRecved(ConnectionData* pConnectionData)
     {
+        ASSERTV(pConnectionData);
+
         m_pData = pConnectionData;
 
-        if (!m_pData->m_pRecvRingBuf)
-        {
-            printf("Connector::ProcedureRecvMsg m_pRecvRingBuf is null \n");
-            return;
-        }
+        ASSERTVLOG(m_pData->m_pRecvRingBuf, "Connector::ProcedureRecvMsg m_pRecvRingBuf is null \n");
 
         m_pData->m_pRecvRingBuf->SkipWrite(m_pData->m_dwRecved);
+
+        ASSERTVLOG(m_pData->m_pMsgHead, "Connector::ProcedureRecvMsg m_pMsgHead is null \n");
 
         INT& nMsgLen = m_pData->m_pMsgHead->m_nLen;
         m_pData->m_dwMsgBodyRecved += m_pData->m_dwRecved;
 
         while (true)
         {
-            if (!m_pData->m_pMsgHead)
-            {
-                printf("Connector::ProcedureRecvMsg pConnectionData->m_pMsgHead is null \n");
-                break;
-            }
+            ASSERTOP(m_pData->m_pMsgHead, printf("Connector::ProcedureRecvMsg pConnectionData->m_pMsgHead is null \n"); break);
 
             // 检测消息头是否需要解析
             if (nMsgLen == 0)

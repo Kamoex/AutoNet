@@ -1,4 +1,5 @@
 #include "BaseServer.h"
+#include "Assert.h"
 
 namespace AutoNet
 {
@@ -35,11 +36,7 @@ namespace AutoNet
 
     void BaseServer::OnAccept(ConnectionData* pData)
     {
-        if (!pData)
-        {
-            // TODO ASSERT
-            return;
-        }
+        ASSERTV(pData);
 
         SESSION_ID uID = ++m_nIncrement;
         m_mapConnections[uID] = pData;
@@ -51,11 +48,7 @@ namespace AutoNet
 
     void BaseServer::OnRecved(ConnectionData* pData)
     {
-        if (!pData->m_pRecvRingBuf)
-        {
-            printf("BaseServer::ProcedureRecvMsg m_pRecvRingBuf is null \n");
-            return;
-        }
+        ASSERTVOP(pData && pData->m_pRecvRingBuf, "BaseServer::ProcedureRecvMsg m_pRecvRingBuf is null \n");
 
         // ÐÞÕýÐ´ÈëÎ»ÖÃ
         pData->m_pRecvRingBuf->SkipWrite(pData->m_dwRecved);
@@ -126,13 +119,8 @@ namespace AutoNet
         if (it == m_mapConnections.end())
             return;
 
-        // TODO ASSERT
         ConnectionData* pData = it->second;
-        if (!pData)
-        {
-            assert(NULL);
-            return;
-        }
+        ASSERTV(pData && pData->m_pSendRingBuf);
 
         DWORD nSendedBytes = 0;
         while (true)
@@ -177,11 +165,7 @@ namespace AutoNet
 
     void BaseServer::Kick(ConnectionData* pData)
     {
-        if (!pData)
-        {
-            // TODO ASSERT
-            return;
-        }
+        ASSERTV(pData);
 
         m_mapConnections.erase(pData->m_uID);
 
