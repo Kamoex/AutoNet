@@ -4,7 +4,7 @@ namespace AutoNet
 {
     struct ConnectionData;
 
-    interface INet
+    __interface INet
     {
         virtual void OnAccept(ConnectionData* pData) = 0;
 

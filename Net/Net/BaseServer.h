@@ -2,6 +2,8 @@
 #include "TypeDef.h"
 #include "Connector.h"
 #include "Net.h"
+#include <atomic>
+#include <map>
 
 namespace AutoNet
 {

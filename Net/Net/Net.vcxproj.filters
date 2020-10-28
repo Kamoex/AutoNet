@@ -4,6 +4,7 @@
     <ClCompile Include="NetSocket.cpp" />
     <ClCompile Include="Connector.cpp" />
     <ClCompile Include="BaseServer.cpp" />
+    <ClCompile Include="SocketAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NetSocket.h" />
@@ -13,5 +14,7 @@
     <ClInclude Include="Assert.h" />
     <ClInclude Include="BaseServer.h" />
     <ClInclude Include="Net.h" />
+    <ClInclude Include="SocketAPI.h" />
+    <ClInclude Include="MsgBase.h" />
   </ItemGroup>
 </Project>

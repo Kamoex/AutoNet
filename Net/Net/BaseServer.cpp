@@ -17,14 +17,14 @@ namespace AutoNet
 
     BOOL BaseServer::Init()
     {
-        if (m_Socket.Init(this, m_uPort, "", m_nMaxSessions))
+        if (!m_Socket.Init(this, m_uPort, "", m_nMaxSessions))
             return FALSE;
         return TRUE;
     }
 
     BOOL BaseServer::Run()
     {
-        if (m_Socket.StartListen())
+        if (!m_Socket.StartListen())
             return FALSE;
 
         while (true)
@@ -122,44 +122,34 @@ namespace AutoNet
         ConnectionData* pData = it->second;
         ASSERTV(pData && pData->m_pSendRingBuf);
 
-        DWORD nSendedBytes = 0;
+        DWORD uSendedBytes = 0;
         while (true)
         {
             // ringbuf处理
-            DWORD dwToSendSize = pData->m_pSendRingBuf->GetUnReadSize();
+            DWORD uToSendSize = pData->m_pSendRingBuf->GetUnReadSize();
 
             // 缓存中没有可发送消息
-            if (dwToSendSize <= 0)
+            if (uToSendSize <= 0)
                 break;
 
-            if (dwToSendSize > CONN_BUF_SIZE)
-                dwToSendSize = CONN_BUF_SIZE;
+            if (uToSendSize > CONN_BUF_SIZE)
+                uToSendSize = CONN_BUF_SIZE;
 
-            WSABUF wsaBuf;
-            wsaBuf.len = dwToSendSize;
-            wsaBuf.buf = new char[dwToSendSize];
-            if (!pData->m_pSendRingBuf->Read(wsaBuf.buf, (DWORD)wsaBuf.len))
+            CHAR* pBuf = new char[uToSendSize];
+            if (!pData->m_pSendRingBuf->Read(pBuf, uToSendSize))
             {
-                delete[] wsaBuf.buf;
+                SAFE_DELETE_ARRY(pBuf);
                 break;
             }
 
-            if (m_Socket.Send(pData, wsaBuf, nSendedBytes) < 0)
+            if (!m_Socket.Send(pData, pBuf, uToSendSize, uSendedBytes))
             {
-                printf("Connector::SendMsg error: %d\n", WSAGetLastError());
-                delete[] wsaBuf.buf;
+                SAFE_DELETE_ARRY(pBuf);
                 break;
             }
 
-            if (nSendedBytes == 0)
-            {
-                printf("EIO_READ nSendedBytes == 0 error: %d\n", WSAGetLastError());
-                delete[] wsaBuf.buf;
-                break;
-            }
-
-            printf("send: %s \n", wsaBuf.buf);
-            delete[] wsaBuf.buf;
+            printf("send: %s \n", pBuf);
+            SAFE_DELETE_ARRY(pBuf);
         }
     }
 

@@ -68,31 +68,23 @@ namespace AutoNet
             if (dwToSendSize > CONN_BUF_SIZE)
                 dwToSendSize = CONN_BUF_SIZE;
 
-            WSABUF wsaBuf;
-            wsaBuf.len = dwToSendSize;
-            wsaBuf.buf = new char[dwToSendSize];
-            if (!m_pData->m_pSendRingBuf->Read(wsaBuf.buf, (DWORD)wsaBuf.len))
+            CHAR* pBuf = new char[dwToSendSize];
+            if (!m_pData->m_pSendRingBuf->Read(pBuf, dwToSendSize))
             {
-                delete[] wsaBuf.buf;
+                ASSERTLOG(NULL, "Connector::SendMsg Read error!!!");
+                SAFE_DELETE_ARRY(pBuf);
                 break;
             }
 
-            if (m_Socket.Send(m_pData, wsaBuf, nSendedBytes) < 0)
+            if (!m_Socket.Send(m_pData, pBuf, dwToSendSize, nSendedBytes))
             {
-                printf("Connector::SendMsg error: %d\n", WSAGetLastError());
-                delete[] wsaBuf.buf;
+                ASSERTLOG(NULL, "Connector::SendMsg Read Send error!!!");
+                SAFE_DELETE_ARRY(pBuf);
                 break;
             }
 
-            if (nSendedBytes == 0)
-            {
-                printf("EIO_READ nSendedBytes == 0 error: %d\n", WSAGetLastError());
-                delete[] wsaBuf.buf;
-                break;
-            }
-
-            printf("send: %s \n", wsaBuf.buf);
-            delete[] wsaBuf.buf;
+            printf("send: %s \n", pBuf);
+            SAFE_DELETE_ARRY(pBuf);
         }
     }
 

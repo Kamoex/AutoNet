@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include "TypeDef.h"
 
 namespace AutoNet
 {

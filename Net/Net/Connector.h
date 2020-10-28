@@ -1,9 +1,6 @@
 #pragma once
 #include "NetSocket.h"
-#include <atomic>
-
-#define SAFE_DELETE(p) if(p) {delete p; p = nullptr;}
-#define SAFE_DELETE_ARRY(p) if(p) {delete[] p; p = nullptr;}
+#include "Net.h"
 
 namespace AutoNet
 {
