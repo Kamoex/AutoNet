@@ -9,6 +9,7 @@ namespace AutoNet
         m_uPort = uPort;
         m_strIP = szIP;
         m_nMaxSessions = nMaxSessions;
+        m_nIncrement = 0;
     }
 
     BaseServer::~BaseServer()
@@ -29,6 +30,8 @@ namespace AutoNet
         if (!m_Socket.StartListen())
             return FALSE;
 
+        printf("server run success!\n");
+
         while (true)
         {
         }
@@ -40,7 +43,8 @@ namespace AutoNet
     {
         ASSERTV(pData);
 
-        SESSION_ID uID = ++m_nIncrement;
+        //SESSION_ID uID = ++m_nIncrement;
+        SESSION_ID uID = pData->m_sock;
         m_mapConnections[uID] = pData;
         pData->m_uID = uID;
 
@@ -51,7 +55,7 @@ namespace AutoNet
 
     void BaseServer::OnRecved(ConnectionData* pData)
     {
-        ASSERTVOP(pData && pData->m_pRecvRingBuf, "BaseServer::ProcedureRecvMsg m_pRecvRingBuf is null \n");
+        ASSERTVLOG(pData && pData->m_pRecvRingBuf, "BaseServer::ProcedureRecvMsg m_pRecvRingBuf is null \n");
 
         // ÐÞÕýÐ´ÈëÎ»ÖÃ
         pData->m_pRecvRingBuf->SkipWrite(pData->m_dwRecved);

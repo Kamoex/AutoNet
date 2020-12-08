@@ -510,7 +510,7 @@ namespace AutoNet
         }
 
         socklen_t addr_len = sizeof(sockaddr_in);
-
+        printf("epoll polling!!!\n");
         while (true)
         {
             INT nFds = epoll_wait(sockData.mEpollFd, sockData.mEpollEvents, MAX_SESSIONS, -1);
@@ -522,7 +522,7 @@ namespace AutoNet
             }
             for (int i = 0; i < nFds; ++i)
             {
-                if ((sockData.mEpollEvents[i].data.fd == ev.data.fd) && (sockData.mEpollEvents[i].events & EPOLLIN))
+                if ((sockData.mEpollEvents[i].data.fd == pNetSock->m_ListenSock) && (sockData.mEpollEvents[i].events & EPOLLIN))
                 {
                     sockaddr_in addr;
                     memset(&addr, 0, sizeof(addr));
@@ -538,11 +538,11 @@ namespace AutoNet
                     pConData->m_sock = peerSock;
                     pNetSock->OnAccepted(pConData);
 
-                    SetSockBlocking(pConData->m_sock, FALSE);
+                    //SetSockBlocking(pConData->m_sock, FALSE);
 
                     ev.data.fd = pConData->m_sock;
                     ev.events = EPOLLIN | EPOLLET;
-                    if (epoll_ctl(sockData.mEpollFd, EPOLL_CTL_MOD, pConData->m_sock, &ev) < 0)
+                    if (epoll_ctl(sockData.mEpollFd, EPOLL_CTL_ADD, pConData->m_sock, &ev) < 0)
                     {
                         LOGERROR("accept epoll_ctl error: %d", errno);
                         ASSERTOP(NULL, continue);
@@ -557,10 +557,7 @@ namespace AutoNet
                     ConnectionData* pConData = pNet->GetConnectionData(sockData.mEpollEvents[i].data.fd);
                     ASSERTN(pConData, FALSE);
 
-                    if (LinuxRecv(pNetSock, pConData))
-                    {
-                        pNetSock->OnRecved(pConData);
-                    }
+                    LinuxRecv(pNetSock, pConData);
                 }
                 else if (sockData.mEpollEvents[i].events & EPOLLOUT)
                 {
@@ -591,6 +588,7 @@ namespace AutoNet
             LOGERROR("send error: %d", errno);
             ASSERTN(NULL, FALSE);
         }
+        pConData->m_dwSended = uLen;
         uTransBytes = (INT)nSize;
         return TRUE;
     }
@@ -599,9 +597,8 @@ namespace AutoNet
     {
         DWORD uLen = 0;
         CHAR* pBuf = pConData->m_pRecvRingBuf->GetWritePos(uLen);
-        LOGERROR("NetSocket::Recv buf overflow!");
-        ASSERTN(pBuf, FALSE);
-        
+        ASSERTNLOG(pBuf, FALSE, "NetSocket::Recv buf overflow! \n");
+
         INT nSize = recv(pConData->m_sock, pBuf, uLen, 0);
         if (nSize < 0)
         {
@@ -621,6 +618,8 @@ namespace AutoNet
             close(pConData->m_sock);
             return FALSE;
         }
+        pConData->m_dwRecved = (DWORD)nSize;
+        pNetSock->OnRecved(pConData);
         return TRUE;
     }
 
