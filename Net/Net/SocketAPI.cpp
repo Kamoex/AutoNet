@@ -11,6 +11,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinInit(pNetSock);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxInit(pNetSock);
         #endif
         return FALSE;
     }
@@ -21,6 +23,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinClose(pNetSock);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxClose(pNetSock);
         #endif
         return FALSE;
     }
@@ -32,6 +36,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinStartListen(pNetSock, nThreadNum);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxStartListen(pNetSock);
         #endif
         return FALSE;
     }
@@ -42,6 +48,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinStartConnect(pNetSock);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+
         #endif
         return FALSE;
     }
@@ -52,6 +60,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinSend(pConData, pBuf, uLen, uTransBytes);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxSend(pConData, pBuf, uLen, uTransBytes);
         #endif
         return FALSE;
     }
@@ -62,6 +72,8 @@ namespace AutoNet
 
         #if PLATEFORM_TYPE == PLATFORM_WIN32
             return WinRecv(pNetSock, pConData);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxRecv(pNetSock, pConData);
         #endif
         return FALSE;
     }
@@ -70,17 +82,13 @@ namespace AutoNet
     {
         ASSERTN(pNetSock && pConData, FALSE);
 
-        pConData->CleanUp();
-        pConData->m_nType = EIO_ACCEPT;
-        pConData->m_sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+        #if PLATEFORM_TYPE == PLATFORM_WIN32
+            return WinResetConnectionData(pNetSock, pConData);
+        #elif PLATEFORM_TYPE == PLATFORM_LINUX
+            return LinuxResetConnectionData(pNetSock, pConData);
+        #endif
 
-        ASSERTNLOG(pConData->m_sock != INVALID_SOCKET, FALSE, "Start WSASocket error: %d\n", WSAGetLastError());
-
-        pNetSock->GetSocketData().m_pAcceptEx(pNetSock->GetListenSocket(), pConData->m_sock, pConData->m_pRecvRingBuf->GetBuf(), 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConData->m_dwRecved, (OVERLAPPED*)&pConData->m_overlapped);
-
-        ASSERTNLOG(WSAGetLastError() == WSA_IO_PENDING, FALSE, "Reset WSASocket error: %d\n", WSAGetLastError());
-
-        return TRUE;
+        
     }
 
 
@@ -135,6 +143,8 @@ namespace AutoNet
                 // 更新socket相关属性 否则getpeername会取不到正确内容
                 setsockopt(pNetSocket->GetListenSocket(), SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
                 pNetSocket->OnConnected(pConData);
+                // TODO 这个做在外层调用逻辑里
+                ASSERTN(SocketAPI::WinRecv(pNetSocket, pConData), -1);
                 break;
             }
             case EIO_ACCEPT:
@@ -155,6 +165,8 @@ namespace AutoNet
                 pConData->m_pRecvRingBuf->Clear();
 
                 pNetSocket->OnAccepted(pConData);
+                // TODO 这个做在外层调用逻辑里
+                ASSERTN(SocketAPI::WinRecv(pNetSocket, pConData), -1);
                 break;
             }
             case EIO_READ:
@@ -173,13 +185,6 @@ namespace AutoNet
                 else
                 {
                     pNetSocket->OnRecved(pConData);
-
-                    WSABUF wsabuf;
-                    wsabuf.buf = pConData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
-                    ASSERTLOG(wsabuf.len > 0, "NetSocket::Recv buf overflow \n")
-
-                    if (WSARecv(pConData->m_sock, &wsabuf, 1, NULL, &pConData->m_dwFlags, &pConData->m_overlapped, NULL) != 0)
-                        ASSERTNOP(WSAGetLastError() == WSA_IO_PENDING, WSAGetLastError(), printf("EIO_READ WSARecv error: %d\n", WSAGetLastError()); pNetSocket->Kick(pConData));
                 }
 
                 break;
@@ -193,7 +198,7 @@ namespace AutoNet
                     pNetSocket->Kick(pConData);
                     return -1;
                 }
-                pNet->OnSended(pConData);
+                pNetSocket->OnSended(pConData);
                 // 已经发送完成 将此线程的状态设置为可接收
                 pConData->m_nType = EIO_READ;
                 break;
@@ -211,22 +216,21 @@ namespace AutoNet
         pNetSock->GetSocketData().m_WSAVersion = MAKEWORD(2, 2);
         INT nResult = WSAStartup(pNetSock->GetSocketData().m_WSAVersion, &pNetSock->GetSocketData().m_WSAData);
 
-        ASSERTNOP(nResult == 0, FALSE, printf("WSAStartup error: %d\n", WSAGetLastError()); Close(pNetSock))
-
-        // TODO IPV6
-        pNetSock->m_Addr.sin_family = AF_INET;
+        ASSERTNOP(nResult == 0, FALSE, printf("WSAStartup error: %d\n", WSAGetLastError()); Close(pNetSock));
+        // TODO IPV6 说明:这里其实可以用AF_UNSPEC 然后用addrinfo来动态适配IPV4 或 IPV6
+		pNetSock->m_Addr.sin_family = AF_INET;
         pNetSock->m_Addr.sin_port = htons(pNetSock->m_uPort);
         if (pNetSock->m_szIP == "")
             pNetSock->m_Addr.sin_addr.s_addr = htons(INADDR_ANY);
         else
-            pNetSock->m_Addr.sin_addr.s_addr = inet_addr(pNetSock->m_szIP.c_str());
+            pNetSock->m_Addr.sin_addr.s_addr = inet_addr(pNetSock->m_szIP.c_str()); // inet_pton(AF_INET, pNetSock->m_szIP.c_str(), &pNetSock->m_Addr.sin_addr.s_addr);
 
         pNetSock->m_ListenSock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 
         ASSERTNOP(pNetSock->m_ListenSock != INVALID_SOCKET, FALSE, printf("WSASocket error: %d\n", WSAGetLastError()); Close(pNetSock));
 
         // 端口重用(防止closesocket以后 当前连接会产生time-waite状态(会持续1-2分钟) 导致重新绑定时会提示address alredy in use)
-        if (setsockopt(pNetSock->m_ListenSock, SOL_SOCKET, SO_REUSEADDR, (const CHAR*)&pNetSock->GetSocketData().m_operation.m_bReuseAddr, sizeof(pNetSock->GetSocketData().m_operation.m_bReuseAddr)) == SOCKET_ERROR)
+        if (setsockopt(pNetSock->m_ListenSock, SOL_SOCKET, SO_REUSEADDR, (const CHAR*)&pNetSock->GetSocketData().m_operation.m_nReuseAddr, sizeof(pNetSock->GetSocketData().m_operation.m_nReuseAddr)) == SOCKET_ERROR)
         {
             printf("setsockopt set SO_REUSEADDR error: %d\n", WSAGetLastError());
             ASSERTNOP(NULL, FALSE, printf("setsockopt set SO_REUSEADDR error: %d\n", WSAGetLastError()); Close(pNetSock))
@@ -303,7 +307,7 @@ namespace AutoNet
                 continue;
             }
 
-            pNetSock->GetSocketData().m_pAcceptEx(pNetSock->m_ListenSock, pConnectionData->m_sock, pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
+            pNetSock->GetSocketData().m_pAcceptEx(pNetSock->m_ListenSock, pConnectionData->m_sock, pConnectionData->m_pRecvRingBuf->GetBuf(), 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &pConnectionData->m_dwRecved, (OVERLAPPED*)&pConnectionData->m_overlapped);
 
             if (WSAGetLastError() != WSA_IO_PENDING)
             {
@@ -324,12 +328,12 @@ namespace AutoNet
         ASSERTNOP(pNetSock->GetSocketData().m_completHandle != INVALID_HANDLE_VALUE, FALSE, printf("NetSocket::StartConnect CreateIoCompletionPort error: %d\n", WSAGetLastError()); Close(pNetSock));
 
         // 需要给本地socket绑定一个addr（不可以绑定server端的addr信息,因为这是你本机的socket,需要绑定你本机的信息）
-        SOCKADDR_IN temp;
+        sockaddr_in temp;
         temp.sin_family = AF_INET;
         temp.sin_port = htons(0);
         //temp.sin_addr.s_addr = htonl(ADDR_ANY);
         temp.sin_addr.s_addr = inet_addr("127.0.0.1");
-        if (::bind(pNetSock->m_ListenSock, (const sockaddr*)&temp, sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+        if (::bind(pNetSock->m_ListenSock, (const sockaddr*)&temp, sizeof(sockaddr_in)) == SOCKET_ERROR)
             ASSERTNOP(NULL, FALSE, printf("WinStartConnect::StartConnect bind error: %d\n", WSAGetLastError()); Close(pNetSock));
 
         GUID GuidConnectEx = WSAID_CONNECTEX;
@@ -354,13 +358,15 @@ namespace AutoNet
             ASSERTLOG(NULL, "WinStartConnect::CreateIoCompletionPort error: %d\n", GetLastError());
             SAFE_DELETE(pData);
             Close(pNetSock);
-        }
+            return FALSE;
+        } 
 
-        if (!pNetSock->GetSocketData().m_pConnectEx(pNetSock->m_ListenSock, (const sockaddr*)&pNetSock->m_Addr, sizeof(SOCKADDR_IN), NULL, 0, &pData->m_dwSended, (OVERLAPPED*)&pData->m_overlapped))
+        if (!pNetSock->GetSocketData().m_pConnectEx(pNetSock->m_ListenSock, (const sockaddr*)&pNetSock->m_Addr, sizeof(sockaddr_in), NULL, 0, &pData->m_dwSended, (OVERLAPPED*)&pData->m_overlapped))
         {
             ASSERTLOG(NULL, "WinStartConnect::error: %d\n", WSAGetLastError());
             SAFE_DELETE(pData);
             Close(pNetSock);
+            return FALSE;
         }
 
         return TRUE;
@@ -374,6 +380,7 @@ namespace AutoNet
         WSABUF wsaBuf;
         wsaBuf.buf = pBuf;
         wsaBuf.len = uLen;
+
         if (WSASend(pConData->m_sock, &wsaBuf, 1, &uTransBytes, pConData->m_dwFlags, &pConData->m_overlapped, NULL) != 0)
             ASSERTNLOG(WSAGetLastError() == WSA_IO_PENDING, FALSE, "EIO_READ WSASend error: %d\n", WSAGetLastError());
 
@@ -389,17 +396,261 @@ namespace AutoNet
         WSABUF wsabuf;
         wsabuf.buf = pConData->m_pRecvRingBuf->GetWritePos(wsabuf.len);
 
-        ASSERTNLOG(wsabuf.buf, FALSE, "SocketAPI::WinRecv GetWritePos is null!!! \n");
-
-        // 投递监听
-        if (CreateIoCompletionPort((HANDLE)pConData->m_sock, pNetSock->GetSocketData().m_completHandle, (ULONG_PTR)pConData, 0) == NULL)
-            ASSERTNLOG(NULL, FALSE, "EIO_ACCEPT CreateIoCompletionPort error: %d\n", WSAGetLastError());
+        ASSERTNLOG(wsabuf.buf, FALSE, "NetSocket::Recv buf overflow! \n");
 
         if (WSARecv(pConData->m_sock, &wsabuf, 1, NULL, &pConData->m_dwFlags, &pConData->m_overlapped, NULL) != 0)
             ASSERTNLOG(WSAGetLastError() == WSA_IO_PENDING, FALSE, "EIO_ACCEPT WSARecv error: %d\n", WSAGetLastError());
         return TRUE;
     }
 
+    BOOL SocketAPI::WinResetConnectionData(NetSocket* pNetSock, ConnectionData* pConData)
+    {
+        pConData->CleanUp();
+        pConData->m_nType = EIO_ACCEPT;
+        pConData->m_sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+        ASSERTNLOG(pConData->m_sock != INVALID_SOCKET, FALSE, "Start WSASocket error: %d\n", WSAGetLastError());
+
+        pNetSock->GetSocketData().m_pAcceptEx(pNetSock->GetListenSocket(), pConData->m_sock, pConData->m_pRecvRingBuf->GetBuf(), 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &pConData->m_dwRecved, (OVERLAPPED*)&pConData->m_overlapped);
+
+        ASSERTNLOG(WSAGetLastError() == WSA_IO_PENDING, FALSE, "Reset WSASocket error: %d\n", WSAGetLastError());
+
+        return TRUE;
+    }
+
+
 #endif
     
+#if PLATEFORM_TYPE == PLATFORM_LINUX
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+    BOOL SocketAPI::LinuxInit(NetSocket* pNetSock)
+    {
+		// TODO IPV6
+		pNetSock->m_ListenSock = socket(AF_INET, SOCK_STREAM, 0);
+		ASSERTNOP(pNetSock->m_ListenSock > 0, FALSE, printf("Socket error: %d\n", errno); Close(pNetSock));
+
+		pNetSock->m_Addr.sin_family = AF_INET;
+		pNetSock->m_Addr.sin_port = htons(pNetSock->m_uPort);
+
+        inet_pton(AF_INET, pNetSock->m_szIP.c_str(), &pNetSock->m_Addr.sin_addr);
+
+        socklen_t paramLen = sizeof(pNetSock->GetSocketData().m_operation.m_nReuseAddr);
+		// 端口重用(防止closesocket以后 当前连接会产生time-waite状态(会持续1-2分钟) 导致重新绑定时会提示address alredy in use)
+        if (setsockopt(pNetSock->m_ListenSock, SOL_SOCKET, SO_REUSEADDR, &(pNetSock->GetSocketData().m_operation.m_nReuseAddr), paramLen) < 0)
+		{
+            LOGERROR("setsockopt set SO_REUSEADDR error: %d", errno);
+            Close(pNetSock);
+            ASSERTN(NULL, FALSE);
+		}
+
+        // 设置非阻塞
+        if (SetSockBlocking(pNetSock->m_ListenSock, FALSE) < 0)
+        {
+            Close(pNetSock);
+            ASSERTNLOG(NULL, FALSE, "SetSockBlocking error: %d\n", errno);
+        }
+        return TRUE;
+    }
+
+    BOOL SocketAPI::LinuxClose(NetSocket* pNetSock)
+    {
+        epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pNetSock->m_ListenSock, &pNetSock->GetSocketData().mEv);
+        close(pNetSock->GetSocketData().mEpollFd);
+        close(pNetSock->m_ListenSock);
+        pNetSock->CleanUp();
+        return TRUE;
+    }
+
+    BOOL SocketAPI::LinuxStartListen(NetSocket* pNetSock)
+    {
+        INet* pNet = pNetSock->GetNet();
+        ASSERTN(pNet, FALSE);
+
+        SocketData& sockData = pNetSock->GetSocketData();
+        sockData.mEpollFd = epoll_create(1);
+        if (sockData.mEpollFd < 0)
+        {
+            ASSERTNLOG(NULL, FALSE, "epoll_create error: %d \n", errno);
+        }
+
+        if (bind(pNetSock->m_ListenSock, (const sockaddr*)&pNetSock->m_Addr, sizeof(pNetSock->m_Addr)) < 0)
+        {
+            INT nErrno = errno;
+            close(sockData.mEpollFd);
+            ASSERTNLOG(NULL, FALSE, "bind error: %d \n", nErrno);
+        }
+
+        if (listen(pNetSock->m_ListenSock, 64) < 0)
+        {
+            INT nErrno = errno;
+            close(sockData.mEpollFd);
+            ASSERTNLOG(NULL, FALSE, "listen error: %d \n", nErrno);
+        }
+
+        epoll_event ev;
+        ev.data.fd = pNetSock->m_ListenSock;
+        ev.events = EPOLLIN | EPOLLET;
+        if (epoll_ctl(sockData.mEpollFd, EPOLL_CTL_ADD, pNetSock->m_ListenSock, &ev) < 0)
+        {
+            INT nErrno = errno;
+            LinuxClose(pNetSock);
+            ASSERTNLOG(NULL, FALSE, "epoll_ctl error: %d \n", nErrno);
+        }
+
+        socklen_t addr_len = sizeof(sockaddr_in);
+
+        while (true)
+        {
+            INT nFds = epoll_wait(sockData.mEpollFd, sockData.mEpollEvents, MAX_SESSIONS, -1);
+            if (nFds < 0)
+            {
+                LOGERROR("epoll_wait error: %d", errno);
+                LinuxClose(pNetSock);
+                ASSERTN(NULL, FALSE);
+            }
+            for (int i = 0; i < nFds; ++i)
+            {
+                if ((sockData.mEpollEvents[i].data.fd == ev.data.fd) && (sockData.mEpollEvents[i].events & EPOLLIN))
+                {
+                    sockaddr_in addr;
+                    memset(&addr, 0, sizeof(addr));
+                    INT peerSock = accept(pNetSock->m_ListenSock, (sockaddr*)&addr, &addr_len);
+                    if (peerSock < 0)
+                    {
+                        LOGERROR("accept error: %d", errno);
+                        ASSERTOP(NULL, continue);
+                    }
+
+                    // TODO 对象池
+                    ConnectionData* pConData = new ConnectionData;
+                    pConData->m_sock = peerSock;
+                    pNetSock->OnAccepted(pConData);
+
+                    SetSockBlocking(pConData->m_sock, FALSE);
+
+                    ev.data.fd = pConData->m_sock;
+                    ev.events = EPOLLIN | EPOLLET;
+                    if (epoll_ctl(sockData.mEpollFd, EPOLL_CTL_MOD, pConData->m_sock, &ev) < 0)
+                    {
+                        LOGERROR("accept epoll_ctl error: %d", errno);
+                        ASSERTOP(NULL, continue);
+                    }
+                    // TODO 放在调用处
+                    LinuxRecv(pNetSock, pConData);
+                }
+                else if (sockData.mEpollEvents[i].events & EPOLLIN)
+                {
+                    INet* pNet = pNetSock->GetNet();
+                    ASSERTN(pNet, FALSE);
+                    ConnectionData* pConData = pNet->GetConnectionData(sockData.mEpollEvents[i].data.fd);
+                    ASSERTN(pConData, FALSE);
+
+                    if (LinuxRecv(pNetSock, pConData))
+                    {
+                        pNetSock->OnRecved(pConData);
+                    }
+                }
+                else if (sockData.mEpollEvents[i].events & EPOLLOUT)
+                {
+                    // 不应该走到这里
+                    LOGERROR("send error!");
+                }
+                else // 发生错误
+                {
+                    LOGERROR("epoll error: %d", errno);
+                    epoll_ctl(sockData.mEpollFd, EPOLL_CTL_DEL, sockData.mEpollEvents[i].data.fd, &ev);
+                    close(sockData.mEpollEvents[i].data.fd);
+                    ASSERTN(NULL, FALSE);
+                }
+            }
+        }
+
+        return TRUE;
+    }
+
+
+    BOOL SocketAPI::LinuxSend(ConnectionData* pConData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes)
+    {
+        // 不用考虑缓冲区溢出情况 因为linux溢出后 会直接丢包
+        INT nSize = send(pConData->m_sock, pBuf, uLen, 0);
+        if (send(pConData->m_sock, pBuf, uLen, 0) < 0)
+        {
+            uTransBytes = 0;
+            LOGERROR("send error: %d", errno);
+            ASSERTN(NULL, FALSE);
+        }
+        uTransBytes = (INT)nSize;
+        return TRUE;
+    }
+
+    BOOL SocketAPI::LinuxRecv(NetSocket* pNetSock, ConnectionData* pConData)
+    {
+        DWORD uLen = 0;
+        CHAR* pBuf = pConData->m_pRecvRingBuf->GetWritePos(uLen);
+        LOGERROR("NetSocket::Recv buf overflow!");
+        ASSERTN(pBuf, FALSE);
+        
+        INT nSize = recv(pConData->m_sock, pBuf, uLen, 0);
+        if (nSize < 0)
+        {
+            LOGERROR("recv error: %d", errno);
+            epoll_event ev;
+            ev.data.fd = pConData->m_sock;
+            epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pConData->m_sock, &ev);
+            close(pConData->m_sock);
+            ASSERTN(NULL, FALSE);
+        }
+        else if (nSize == 0) // 对端断开连接
+        {
+            LOGERROR("peer shutdown!");
+            epoll_event ev;
+            ev.data.fd = pConData->m_sock;
+            epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pConData->m_sock, &ev);
+            close(pConData->m_sock);
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    BOOL SocketAPI::LinuxResetConnectionData(NetSocket* pNetSock, ConnectionData* pConData)
+    {
+        epoll_event ev;
+        ev.data.fd = pConData->m_sock;
+        epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pConData->m_sock, &ev);
+        pConData->CleanUp();
+        // TODO 将pCondata放入对象池
+    }
+
+
+#endif
+
+    INT SocketAPI::SetSockBlocking(SOCKET sock, BOOL bBlocking)
+    {
+#if PLATEFORM_TYPE == PLATFORM_WIN32
+        
+        DWORD ul = 1;
+        if (bBlocking)
+            ul = 0;
+        return ioctlsocket(sock, SOCK_STREAM, &ul);
+#elif PLATEFORM_TYPE == PLATFORM_LINUX
+        // 设置非阻塞
+        INT flags = fcntl(sock, F_GETFL, 0);
+        if (bBlocking)
+            return fcntl(sock, F_SETFL, flags & ~O_NONBLOCK);
+        else
+            return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#endif
+    }
 }

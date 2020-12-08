@@ -26,13 +26,13 @@ namespace AutoNet
 
         void Kick(ConnectionData* pConnectionData) override {};
 
+        ConnectionData* GetConnectionData(SESSION_ID uID = 0) override;
+
         BOOL Init(CHAR* szIP, WORD uPort);
 
         void Connect();
 
         void SendMsg();
-
-        
 
         void CleanUp();
 

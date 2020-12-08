@@ -11,7 +11,7 @@ namespace AutoNet
 {
     NetSocket::NetSocket(INT nMaxSessions)
     {
-
+        CleanUp();
     }
 
     NetSocket::~NetSocket()
@@ -25,7 +25,7 @@ namespace AutoNet
         m_nMaxConnectionsNums = 0;
         m_pNet = NULL;
         m_vecWorkThread.clear();
-        ZeroMemory(&m_Addr, sizeof(m_Addr));
+        memset(&m_Addr, 0, sizeof(m_Addr));
         return TRUE;
     }
 
@@ -41,7 +41,10 @@ namespace AutoNet
         m_pNet = pNet;
         m_nMaxConnectionsNums = nMaxSessions;
 
-        SocketAPI::Init(this);
+        if (SocketAPI::Init(this))
+        {
+            printf("init success!!!\n");
+        }
 
         return TRUE;
     }
@@ -59,31 +62,25 @@ namespace AutoNet
     INT NetSocket::OnConnected(ConnectionData* pConnectionData)
     {
         m_pNet->OnConnected(pConnectionData);
-        Recv(pConnectionData);
         return 0;
     }
 
     INT NetSocket::OnAccepted(ConnectionData* pConnectionData)
     {
         m_pNet->OnAccept(pConnectionData);
-        Recv(pConnectionData);
         return 0;
-    }
-
-    BOOL NetSocket::Recv(ConnectionData* pConnectionData)
-    {
-        ASSERTN(pConnectionData, FALSE);
-        if (!SocketAPI::Recv(this, pConnectionData))
-        {
-            Kick(pConnectionData);
-            return FALSE;
-        }
-        return TRUE;
     }
 
     INT NetSocket::OnRecved(ConnectionData* pConnectionData)
     {
         m_pNet->OnRecved(pConnectionData);
+        ASSERTN(SocketAPI::Recv(this, pConnectionData), -1);
+        return 0;
+    }
+
+    INT NetSocket::OnSended(ConnectionData* pConnectionData)
+    {
+        m_pNet->OnSended(pConnectionData);
         return 0;
     }
 
@@ -99,7 +96,7 @@ namespace AutoNet
     }
 
     BOOL NetSocket::Kick(ConnectionData* pConnectionData)
-    {
+     {
         ASSERTN(pConnectionData, FALSE);
         m_pNet->Kick(pConnectionData);
         SocketAPI::ResetConnectionData(this, pConnectionData);
@@ -107,11 +104,12 @@ namespace AutoNet
     }
 }
 
-INT main()
+int main()
 {
     if (1)
     {
-        AutoNet::BaseServer server("", 8001, 10);
+        char* szAddr = "0.0.0.0";
+        AutoNet::BaseServer server(szAddr, 8001, 10);
         server.Init();
         server.Run();
         while (true)
@@ -122,7 +120,8 @@ INT main()
     else
     {
         AutoNet::Connector connertor;
-        connertor.Init("127.0.0.1", 8001);
+        char* szAddr = "127.0.0.1";
+        connertor.Init(szAddr, 8001);
         connertor.Connect();
         //WaitForSingleObject(connertor.GetNetSocket()->m_vecWorkThread[0], INFINITE);
         while (true)

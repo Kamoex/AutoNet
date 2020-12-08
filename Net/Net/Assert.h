@@ -1,5 +1,6 @@
 #pragma once
 #include "stdio.h"
+#include <assert.h>
 
 namespace AutoNet
 {
@@ -14,4 +15,6 @@ namespace AutoNet
 #define ASSERTLOG(expr, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); assert(NULL);}
 #define ASSERTVLOG(expr, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); assert(NULL); return;}
 #define ASSERTNLOG(expr, N, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); assert(NULL); return (N);}
+
+#define LOGERROR(fmt, ...) printf(fmt, ##__VA_ARGS__); printf("\n");
 }

@@ -7,14 +7,15 @@ namespace AutoNet
 
 #ifndef _WIN32
 #define PLATEFORM_TYPE PLATFORM_LINUX
+#define HANDLE int
 #endif
 
 #ifndef __linux
 #define PLATEFORM_TYPE PLATFORM_WIN32
 #endif
 
-#define SAFE_DELETE(p) if(p) {delete p; p = nullptr;}
-#define SAFE_DELETE_ARRY(p) if(p) {delete[] p; p = nullptr;}
+#define SAFE_DELETE(p) if(p) {delete p; p = NULL;}
+#define SAFE_DELETE_ARRY(p) if(p) {delete[] p; p = NULL;}
 
 #define FALSE 0
 #define TRUE  1
@@ -36,7 +37,6 @@ namespace AutoNet
     typedef bool                BOOL;
 
     typedef unsigned int        SESSION_ID;
-
-
+    typedef void*               LPVOID;
 
 }

@@ -17,7 +17,7 @@ namespace AutoNet
     friend class SocketAPI;
     public:
         NetSocket(INT nMaxSessions);
-        NetSocket() {};
+        NetSocket() { CleanUp(); };
         ~NetSocket();
 
         BOOL Init(INet* pNet, WORD uPort, CHAR* szIP, INT nMaxSessions);
@@ -32,9 +32,9 @@ namespace AutoNet
 
         INT  OnAccepted(ConnectionData* pConnectionData);
 
-        BOOL Recv(ConnectionData* pConnectionData);
-
         INT  OnRecved(ConnectionData* pConnectionData);
+
+        INT  OnSended(ConnectionData* pConnectionData);
 
         BOOL Send(ConnectionData* pConnectionData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes);
 
@@ -51,7 +51,7 @@ namespace AutoNet
         WORD                        m_uPort;
         std::string                 m_szIP;
         SOCKET                      m_ListenSock;               // 监听socket
-        SOCKADDR_IN                 m_Addr;                     // 监听端地址
+        sockaddr_in                 m_Addr;                     // 监听端地址
         std::vector<HANDLE>         m_vecWorkThread;            // worker线程
         INT                         m_nMaxConnectionsNums;      // 最大连接数量
         INet*                       m_pNet;

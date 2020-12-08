@@ -30,7 +30,7 @@ namespace AutoNet
 
         m_pData = pConnectionData;
 
-        static const INT MSGSIZE1 = 10;
+        /*static const INT MSGSIZE1 = 10;
         static const INT MSGSIZE = 10;
         char sendbuf[MSGSIZE1][MSGSIZE] = {};
         int nTemp = 0;
@@ -44,7 +44,12 @@ namespace AutoNet
             nTemp = ++nTemp <= 9 ? nTemp : 0;
             m_pData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
             SendMsg();
-        }
+        }*/
+    }
+
+    ConnectionData* Connector::GetConnectionData(SESSION_ID uID /*= 0*/)
+    {
+        return m_pData;
     }
 
     void Connector::SendMsg()
@@ -87,7 +92,7 @@ namespace AutoNet
             SAFE_DELETE_ARRY(pBuf);
         }
     }
-
+    
     void Connector::OnRecved(ConnectionData* pConnectionData)
     {
         ASSERTV(pConnectionData);
@@ -133,7 +138,8 @@ namespace AutoNet
             m_pData->m_dwMsgBodyRecved -= nMsgLen;
             nMsgLen = 0;
 
-            static const INT MSGSIZE1 = 1;
+            // TEST
+            /*static const INT MSGSIZE1 = 1;
             static const INT MSGSIZE = 10;
             char sendbuf[MSGSIZE1][MSGSIZE] = {};
             int nTemp = 0;
@@ -147,13 +153,13 @@ namespace AutoNet
                 nTemp = ++nTemp <= 9 ? nTemp : 0;
                 pConnectionData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
                 SendMsg();
-            }
+            }*/
 
             if (m_pData->m_dwMsgBodyRecved == 0)
                 break;
         }
 
-        ZeroMemory(m_pData->m_RecvBuf, CONN_BUF_SIZE);
+        memset(m_pData->m_RecvBuf, 0, CONN_BUF_SIZE);
     }
 
     void Connector::CleanUp()

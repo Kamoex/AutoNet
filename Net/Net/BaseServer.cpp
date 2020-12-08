@@ -1,5 +1,6 @@
 #include "BaseServer.h"
 #include "Assert.h"
+#include "TypeDef.h"
 
 namespace AutoNet
 {
@@ -17,7 +18,8 @@ namespace AutoNet
 
     BOOL BaseServer::Init()
     {
-        if (!m_Socket.Init(this, m_uPort, "", m_nMaxSessions))
+        CHAR* szAddr = "0.0.0.0";
+        if (!m_Socket.Init(this, m_uPort, szAddr, m_nMaxSessions))
             return FALSE;
         return TRUE;
     }
@@ -44,6 +46,7 @@ namespace AutoNet
 
         // TODO DEBUG
         printf("a new client connected!!! id: %d\n", uID);
+        
     }
 
     void BaseServer::OnRecved(ConnectionData* pData)
@@ -110,7 +113,7 @@ namespace AutoNet
                 break;
         }
 
-        ZeroMemory(pData->m_RecvBuf, CONN_BUF_SIZE);
+        memset(pData->m_RecvBuf, 0, CONN_BUF_SIZE);
     }
 
     void BaseServer::SendMsg(SESSION_ID uID)
@@ -172,5 +175,13 @@ namespace AutoNet
         }
         m_mapConnections.clear();
         m_Socket.CleanUp();
+    }
+
+    ConnectionData* BaseServer::GetConnectionData(SESSION_ID uID)
+    {
+        auto it = m_mapConnections.find(uID);
+        if (it == m_mapConnections.end())
+            return NULL;
+        return it->second;
     }
 }

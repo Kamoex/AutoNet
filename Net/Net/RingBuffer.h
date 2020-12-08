@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <string.h>
 #include "TypeDef.h"
 
 namespace AutoNet
@@ -10,7 +11,7 @@ namespace AutoNet
         RingBuffer(const DWORD nSize)
         {
             m_pBuf = new CHAR[nSize];
-            std::memset(m_pBuf, 0, nSize);
+            memset(m_pBuf, 0, nSize);
             m_pEnd = m_pBuf + nSize;
             m_pRead = m_pBuf;
             m_pWrite = m_pBuf;
@@ -25,7 +26,7 @@ namespace AutoNet
             if (m_pBuf)
             {
                 delete m_pBuf;
-                m_pBuf = nullptr;
+                m_pBuf = NULL;
             }
             m_pEnd = NULL;
             m_pRead = NULL;
@@ -47,8 +48,8 @@ namespace AutoNet
 
             if (m_pWrite + dwSize > m_pEnd)
             {
-                INT nFirstSize = m_pEnd - m_pWrite;
-                INT nSecondSize = dwSize - nFirstSize;
+                INT64 nFirstSize = m_pEnd - m_pWrite;
+                INT64 nSecondSize = dwSize - nFirstSize;
                 memcpy(m_pWrite, pBuffer, nFirstSize);
                 memcpy(m_pBuf, pBuffer + nFirstSize, nSecondSize);
                 m_pWrite = m_pBuf + nSecondSize;
@@ -77,8 +78,8 @@ namespace AutoNet
 
             if (m_pRead + nSize > m_pEnd)
             {
-                INT nFirstSize = m_pEnd - m_pRead;
-                INT nSecondSize = nSize - nFirstSize;
+                INT64 nFirstSize = m_pEnd - m_pRead;
+                INT64 nSecondSize = nSize - nFirstSize;
                 memcpy(pBuf, m_pRead, nFirstSize);
                 memcpy(pBuf + nFirstSize, m_pBuf, nSecondSize);
                 m_pRead = m_pBuf + nSecondSize;
@@ -108,8 +109,8 @@ namespace AutoNet
 
             if (m_pWrite + dwSize > m_pEnd)
             {
-                INT nFirstSize = m_pEnd - m_pWrite;
-                INT nSecondSize = dwSize - nFirstSize;
+                INT64 nFirstSize = m_pEnd - m_pWrite;
+                INT64 nSecondSize = dwSize - nFirstSize;
                 m_pWrite = m_pBuf + nSecondSize;
             }
             else
@@ -135,17 +136,19 @@ namespace AutoNet
                 m_pWrite = m_pBuf;
             }
 
+            INT64 nLen = 0;
             if (m_pWrite < m_pRead)
-                uLen = m_pRead - m_pWrite;
+                nLen = m_pRead - m_pWrite;
             else
-                uLen = m_pEnd - m_pWrite;
+                nLen = m_pEnd - m_pWrite;
 
+            uLen = (DWORD)nLen;
             return m_pWrite;
         }
 
         void Clear()
         {
-            std::memset(m_pBuf, 0, m_nMaxSize);
+            memset(m_pBuf, 0, m_nMaxSize);
             m_pRead = m_pBuf;
             m_pWrite = m_pBuf;
             m_dwUnReadSize = 0;
