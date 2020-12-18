@@ -19,17 +19,21 @@ namespace AutoNet
 
         BOOL Run();
 
-        void OnAccept(ConnectionData* pData) override;
+        ENetRes OnAccept(ConnectionData* pConnectionData) override;
 
-        void OnConnected(ConnectionData* pConnectionData) override {};
+        ENetRes OnConnected(ConnectionData* pConnectionData) override { return E_NET_SUC; }
 
-        void OnRecved(ConnectionData* pData) override;
+        ENetRes OnDisConnected(ConnectionData* pConnectionData) override;
 
-        void OnSended(ConnectionData* pData) override {};
+        ENetRes OnRecved(ConnectionData* pConnectionData, CHAR* pMsg) override;
 
-        void Kick(ConnectionData* pData)     override;
+        ENetRes OnSended(ConnectionData* pConnectionData) override { return E_NET_SUC; }
 
-        ConnectionData* GetConnectionData(SESSION_ID uID = 0) override;
+        ENetRes Kick(ConnectionData* pConnectionData) override;
+
+        ENetRes HandleRes(ENetRes eRes, void* pParam) override;
+
+        Connector* GetConnector(SESSION_ID uID);
 
         void SendMsg(SESSION_ID uID);
 
@@ -41,6 +45,6 @@ namespace AutoNet
         INT  m_nMaxSessions;
         NetSocket                               m_Socket;
         std::atomic<DWORD>                      m_nIncrement;       // 自增ID(以后优化)
-        std::map<SESSION_ID, ConnectionData*>   m_mapConnections;   // 已连接的session TODO 加锁 后续优化成hashmap
+        std::map<SESSION_ID, Connector*>        m_mapConnections;   // 已连接的session TODO 加锁 后续优化成hashmap 否则会很慢
     };
 }

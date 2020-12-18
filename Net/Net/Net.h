@@ -1,22 +1,29 @@
 #pragma once
 #include "TypeDef.h"
+#include "NetDef.h"
 
 namespace AutoNet
 {
     struct ConnectionData;
 
-    struct INet
+    class INet
     {
-        virtual void OnAccept(ConnectionData* pData) = 0;
+    public:
+        INet() {};
+        virtual ~INet() {};
 
-        virtual void OnConnected(ConnectionData* pConnectionData) = 0;
+        virtual ENetRes OnAccept(ConnectionData* pConnectionData) = 0;
 
-        virtual void OnRecved(ConnectionData* pData) = 0;
+        virtual ENetRes OnConnected(ConnectionData* pConnectionData) = 0;
 
-        virtual void OnSended(ConnectionData* pData) = 0;
+        virtual ENetRes OnDisConnected(ConnectionData* pConnectionData) = 0;
 
-        virtual void Kick(ConnectionData* pData) = 0;
+        virtual ENetRes OnRecved(ConnectionData* pConnectionData, CHAR* pMsg) = 0;
 
-        virtual ConnectionData* GetConnectionData(SESSION_ID uID = 0) = 0;
+        virtual ENetRes OnSended(ConnectionData* pConnectionData) = 0;
+
+        virtual ENetRes Kick(ConnectionData* pConnectionData) = 0;
+
+        virtual ENetRes HandleRes(ENetRes eRes, void* pParam) = 0;
     };
 }

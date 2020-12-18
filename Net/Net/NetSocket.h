@@ -20,11 +20,11 @@ namespace AutoNet
         NetSocket() { CleanUp(); };
         ~NetSocket();
 
-        BOOL Init(INet* pNet, WORD uPort, CHAR* szIP, INT nMaxSessions);
+        BOOL Init(INet* pNet, INT nMaxSessions);
 
-        BOOL StartListen(DWORD nThreadNum = 0);
+        BOOL StartListen(WORD uPort, const CHAR* szIP, DWORD nThreadNum = 0);
 
-        BOOL StartConnect();
+        BOOL StartConnect(WORD uPort, const CHAR* szIP);
 
         BOOL CleanUp();
 
@@ -42,14 +42,10 @@ namespace AutoNet
 
     public:
         inline INet* GetNet() { return m_pNet; }
-        inline const CHAR* GetTargetIP() { return m_szIP.c_str(); }
-        inline WORD GetTargetPort() { return m_uPort; }
     public:
         inline SOCKET& GetListenSocket() { return m_ListenSock; }
         inline SocketData& GetSocketData() { return m_sockData; }
     private:
-        WORD                        m_uPort;
-        std::string                 m_szIP;
         SOCKET                      m_ListenSock;               // ¼àÌýsocket
         sockaddr_in                 m_Addr;                     // ¼àÌý¶ËµØÖ·
         std::vector<HANDLE>         m_vecWorkThread;            // workerÏß³Ì

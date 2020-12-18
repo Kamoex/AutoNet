@@ -48,11 +48,11 @@ namespace AutoNet
 
             if (m_pWrite + dwSize > m_pEnd)
             {
-                INT64 nFirstSize = m_pEnd - m_pWrite;
-                INT64 nSecondSize = dwSize - nFirstSize;
-                memcpy(m_pWrite, pBuffer, nFirstSize);
-                memcpy(m_pBuf, pBuffer + nFirstSize, nSecondSize);
-                m_pWrite = m_pBuf + nSecondSize;
+                size_t uFirstSize = m_pEnd - m_pWrite;
+                size_t uSecondSize = dwSize - uFirstSize;
+                memcpy(m_pWrite, pBuffer, uFirstSize);
+                memcpy(m_pBuf, pBuffer + uFirstSize, uSecondSize);
+                m_pWrite = m_pBuf + uSecondSize;
             }
             else
             {
@@ -78,11 +78,11 @@ namespace AutoNet
 
             if (m_pRead + nSize > m_pEnd)
             {
-                INT64 nFirstSize = m_pEnd - m_pRead;
-                INT64 nSecondSize = nSize - nFirstSize;
-                memcpy(pBuf, m_pRead, nFirstSize);
-                memcpy(pBuf + nFirstSize, m_pBuf, nSecondSize);
-                m_pRead = m_pBuf + nSecondSize;
+                size_t uFirstSize = m_pEnd - m_pRead;
+                size_t uSecondSize = nSize - uFirstSize;
+                memcpy(pBuf, m_pRead, uFirstSize);
+                memcpy(pBuf + uFirstSize, m_pBuf, uSecondSize);
+                m_pRead = m_pBuf + uSecondSize;
             }
             else
             {

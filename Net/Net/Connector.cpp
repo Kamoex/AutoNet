@@ -6,7 +6,15 @@ namespace AutoNet
 {
     Connector::Connector()
     {
-        m_pData = NULL;
+        CleanUp();
+        m_Socket.Init(this, 1);
+    }
+    Connector::Connector(CHAR* szIP, WORD uPort)
+    {
+        CleanUp();
+        m_Socket.Init(this, 1);
+        m_szIP = szIP;
+        m_uPort = uPort;
     }
 
     Connector::~Connector()
@@ -14,51 +22,65 @@ namespace AutoNet
         SAFE_DELETE(m_pData);
     }
 
-    BOOL Connector::Init(CHAR* szIP, WORD uPort)
+    BOOL Connector::Init(SESSION_ID UID, ConnectionData* pConnectionData)
     {
-        return m_Socket.Init(this, uPort, szIP, 1);
-    }
-
-    void Connector::Connect()
-    {
-        m_Socket.StartConnect();
-    }
-
-    void Connector::OnConnected(ConnectionData* pConnectionData)
-    {
-        printf("connected success! addres: %s:%d \n", m_Socket.GetTargetIP(), m_Socket.GetTargetPort());
-
+        ASSERTN(pConnectionData, FALSE);
         m_pData = pConnectionData;
+        CHAR szIP[IP_MAX] = {};
+        SocketAPI::GetAddrInfo(m_pData->m_addr, szIP, sizeof(m_szIP), m_uPort);
+        m_szIP = szIP;
+        return TRUE;
+    }
 
-        /*static const INT MSGSIZE1 = 10;
-        static const INT MSGSIZE = 10;
-        char sendbuf[MSGSIZE1][MSGSIZE] = {};
+    BOOL Connector::Connect()
+    {
+        return m_Socket.StartConnect(m_uPort, m_szIP.c_str());
+    }
+
+    ENetRes Connector::OnConnected(ConnectionData* pConnectionData)
+    {
+        ASSERTN(pConnectionData, E_NET_INVALID_VALUE);
+        m_pData = pConnectionData;
+        printf("connected success! addres: %s:%d \n", m_szIP.c_str(), m_uPort);
+
+#define MSGSIZE 10
+        char buf[MSGSIZE][MSGSIZE] = {};
         int nTemp = 0;
-        for (int i = 0; i < MSGSIZE1; i++)
+        for (int i = 0; i < MSGSIZE; i++)
         {
-            ZeroMemory(sendbuf[i], MSGSIZE);
+            ZeroMemory(buf[i], MSGSIZE);
             for (int j = 0; j < MSGSIZE; j++)
             {
-                sendbuf[i][j] = 48 + (nTemp % 48);
+                buf[i][j] = 97 + (nTemp % 97);
             }
             nTemp = ++nTemp <= 9 ? nTemp : 0;
-            m_pData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
-            SendMsg();
-        }*/
-    }
-
-    ConnectionData* Connector::GetConnectionData(SESSION_ID uID /*= 0*/)
-    {
-        return m_pData;
-    }
-
-    void Connector::SendMsg()
-    {
-        if (!m_pData)
-        {
-            printf("Connector::SendMsg() m_pData is null! \n");
-            return;
         }
+
+        for (size_t i = 0; i < MSGSIZE; i++)
+        {
+            MsgHead head;
+            head.m_nMsgLen = sizeof(buf[i]);
+            char sendBuf[sizeof(MsgHead) + sizeof(buf[i])] = {};
+            memcpy(sendBuf, &head, sizeof(MsgHead));
+            memcpy(sendBuf + sizeof(MsgHead), &buf[i][0], sizeof(buf[i]));
+            WSABUF wsaBuf;
+            wsaBuf.buf = sendBuf;
+            wsaBuf.len = sizeof(MsgHead) + sizeof(buf[i]);
+            SendMsg(wsaBuf.buf, wsaBuf.len);
+            printf("send msg: %s,bytes: %llu\n", sendBuf, sizeof(wsaBuf.len));
+        }
+    }
+
+    ENetRes Connector::OnDisConnected(ConnectionData* pConnectionData)
+    {
+        return E_NET_SUC;
+    }
+
+    ENetRes Connector::SendMsg(CHAR* buf, DWORD uSize)
+    {
+        ASSERTN(buf, E_NET_INVALID_VALUE);
+        ASSERTN(m_pData, E_NET_INVALID_VALUE);
+        ASSERTN(m_pData->m_pSendRingBuf->Write(buf, uSize), E_NET_INVALID_VALUE);
 
         DWORD nSendedBytes = 0;
         while(true)
@@ -76,14 +98,14 @@ namespace AutoNet
             CHAR* pBuf = new char[dwToSendSize];
             if (!m_pData->m_pSendRingBuf->Read(pBuf, dwToSendSize))
             {
-                ASSERTLOG(NULL, "Connector::SendMsg Read error!!!");
+                LOGERROR("Connector::SendMsg Read error!!!");
                 SAFE_DELETE_ARRY(pBuf);
                 break;
             }
 
             if (!m_Socket.Send(m_pData, pBuf, dwToSendSize, nSendedBytes))
             {
-                ASSERTLOG(NULL, "Connector::SendMsg Read Send error!!!");
+                LOGERROR("Connector::SendMsg Read Send error!!!");
                 SAFE_DELETE_ARRY(pBuf);
                 break;
             }
@@ -91,38 +113,46 @@ namespace AutoNet
             printf("send: %s \n", pBuf);
             SAFE_DELETE_ARRY(pBuf);
         }
+        return E_NET_SUC;
     }
     
-    void Connector::OnRecved(ConnectionData* pConnectionData)
+    ENetRes Connector::OnRecved(ConnectionData* pConnectionData, CHAR* pMsg)
     {
-        ASSERTV(pConnectionData);
+        ASSERTN(pConnectionData && pConnectionData->m_pRecvRingBuf, E_NET_INVALID_VALUE);
 
+        if (m_pData != NULL)
+        {
+            if (m_pData != pConnectionData)
+            {
+                LOGERROR("Connector::OnRecved m_pData addr is different with pConnectionData");
+            }
+        }
         m_pData = pConnectionData;
 
-        ASSERTVLOG(m_pData->m_pRecvRingBuf, "Connector::ProcedureRecvMsg m_pRecvRingBuf is null \n");
+        // TODO 把收到的完整的buffer丢到处理队列中
 
+
+        /*
         m_pData->m_pRecvRingBuf->SkipWrite(m_pData->m_dwRecved);
 
-        ASSERTVLOG(m_pData->m_pMsgHead, "Connector::ProcedureRecvMsg m_pMsgHead is null \n");
+        ASSERTNLOG(m_pData->m_pMsgHead, E_NET_INVALID_VALUE, "Connector::ProcedureRecvMsg m_pMsgHead is null! session_id: %d", pConnectionData->m_uSessionID);
 
-        INT& nMsgLen = m_pData->m_pMsgHead->m_nLen;
-        m_pData->m_dwMsgBodyRecved += m_pData->m_dwRecved;
+        INT& nMsgLen = m_pData->m_pMsgHead->m_nMsgLen;
+        m_pData->m_dwSingleMsgRecved += m_pData->m_dwRecved;
 
         while (true)
         {
-            ASSERTOP(m_pData->m_pMsgHead, printf("Connector::ProcedureRecvMsg pConnectionData->m_pMsgHead is null \n"); break);
-
             // 检测消息头是否需要解析
             if (nMsgLen == 0)
             {
                 if (!m_pData->m_pRecvRingBuf->Read((CHAR*)m_pData->m_pMsgHead, sizeof(MsgHead)))
                     break;
                 else
-                    m_pData->m_dwMsgBodyRecved -= sizeof(MsgHead);
+                    m_pData->m_dwSingleMsgRecved -= sizeof(MsgHead);
             }
 
             // 接收的长度不够 不解析消息体
-            if (m_pData->m_dwMsgBodyRecved < (DWORD)nMsgLen)
+            if (m_pData->m_dwSingleMsgRecved < (DWORD)nMsgLen)
                 break;
 
             // 每个Connector都需要有个消息队列 把msgBody放入到队列中 先这么写 TODO 从内存池里申请
@@ -135,36 +165,45 @@ namespace AutoNet
 
             printf("recved: %s \n", pMsgBody);
             SAFE_DELETE_ARRY(pMsgBody);
-            m_pData->m_dwMsgBodyRecved -= nMsgLen;
+            m_pData->m_dwSingleMsgRecved -= nMsgLen;
             nMsgLen = 0;
 
             // TEST
-            /*static const INT MSGSIZE1 = 1;
-            static const INT MSGSIZE = 10;
-            char sendbuf[MSGSIZE1][MSGSIZE] = {};
-            int nTemp = 0;
-            for (int i = 0; i < MSGSIZE1; i++)
-            {
-                ZeroMemory(sendbuf[i], MSGSIZE);
-                for (int j = 0; j < MSGSIZE; j++)
-                {
-                    sendbuf[i][j] = 48 + (nTemp % 48);
-                }
-                nTemp = ++nTemp <= 9 ? nTemp : 0;
-                pConnectionData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
-                SendMsg();
-            }*/
+            //static const INT MSGSIZE1 = 1;
+            //static const INT MSGSIZE = 10;
+            //char sendbuf[MSGSIZE1][MSGSIZE] = {};
+            //int nTemp = 0;
+            //for (int i = 0; i < MSGSIZE1; i++)
+            //{
+            //    ZeroMemory(sendbuf[i], MSGSIZE);
+            //    for (int j = 0; j < MSGSIZE; j++)
+            //    {
+            //        sendbuf[i][j] = 48 + (nTemp % 48);
+            //    }
+            //    nTemp = ++nTemp <= 9 ? nTemp : 0;
+            //    pConnectionData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
+            //    SendMsg();
+            //}
 
-            if (m_pData->m_dwMsgBodyRecved == 0)
+            if (m_pData->m_dwSingleMsgRecved == 0)
                 break;
         }
 
         memset(m_pData->m_RecvBuf, 0, CONN_BUF_SIZE);
+        */
+    }
+
+    ENetRes Connector::HandleRes(ENetRes eRes, void* pParam)
+    {
+        return E_NET_NONE_ERR;
     }
 
     void Connector::CleanUp()
     {
+        m_pData = NULL;
         m_Socket.CleanUp();
+        m_szIP = "";
+        m_uPort = 0;
     }
 
 }

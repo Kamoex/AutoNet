@@ -6,11 +6,13 @@ namespace AutoNet
 #pragma pack(push, 1)
     struct MsgHead
     {
-        INT m_nLen;
+        INT m_nMsgID;
+        INT m_nMsgLen;
 
         void Clear()
         {
-            m_nLen = 0;
+            m_nMsgID = 0;
+            m_nMsgLen = 0;
         }
     };
 #pragma pack(pop)

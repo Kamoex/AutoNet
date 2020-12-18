@@ -5,19 +5,26 @@
 
 #if PLATEFORM_TYPE == PLATFORM_WIN32
 
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+//#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
 #include <mswsock.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
 
 #elif PLATEFORM_TYPE == PLATFORM_LINUX
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include "sys/epoll.h"
-#define SOCKET int
-#define INVALID_SOCKET -1
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <string.h>
+#include <arpa/inet.h>
 #endif
 
 namespace AutoNet
@@ -94,9 +101,9 @@ namespace AutoNet
     {
 #if PLATEFORM_TYPE == PLATFORM_WIN32
         OVERLAPPED m_overlapped;
-#endif // PLATEFORM_TYPE == PLATFORM_WIN32
+#endif
 
-        SESSION_ID m_uID;
+        SESSION_ID m_uSessionID;
         INT m_nType;
 
         DWORD m_dwRecved;
@@ -106,7 +113,7 @@ namespace AutoNet
         CHAR m_SendBuf[CONN_BUF_SIZE];
 
         MsgHead* m_pMsgHead;
-        DWORD m_dwMsgBodyRecved;
+        DWORD m_dwSingleMsgRecved;
         RingBuffer* m_pRecvRingBuf;
         RingBuffer* m_pSendRingBuf;
         SOCKET m_sock;
@@ -135,7 +142,7 @@ namespace AutoNet
             memset(&m_overlapped, 0, sizeof(m_overlapped));
 #elif PLATEFORM_TYPE == PLATFORM_LINUX
             close(m_sock);
-#endif // PLATEFORM_TYPE == PLATFORM_WIN32
+#endif
             m_sock = INVALID_SOCKET;
             memset(&m_addr, 0, sizeof(m_addr));
             memset(&m_RecvBuf, 0, sizeof(m_RecvBuf));
@@ -144,12 +151,12 @@ namespace AutoNet
             m_pRecvRingBuf->Clear();
             m_pSendRingBuf->Clear();
 
-            m_uID = 0;
+            m_uSessionID = 0;
             m_nType = 0;
             m_dwRecved = 0;
             m_dwSended = 0;
             m_dwFlags = 0;
-            m_dwMsgBodyRecved = 0;
+            m_dwSingleMsgRecved = 0;
         }
     };
 
@@ -159,13 +166,11 @@ namespace AutoNet
     public:
         friend DWORD WorkThread(LPVOID pParam);
 
-        static BOOL Init(NetSocket* pNetSock);
-
         static BOOL Close(NetSocket* pNetSock);
 
-        static BOOL StartListen(NetSocket* pNetSock, DWORD nThreadNum);
+        static BOOL StartListen(NetSocket* pNetSock, WORD uPort, const CHAR* szIP, DWORD nThreadNum);
 
-        static BOOL StartConnect(NetSocket* pNetSock);
+        static BOOL StartConnect(NetSocket* pNetSock, WORD uPort, const CHAR* szIP);
 
         static BOOL Send(ConnectionData* pConData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes);
 
@@ -173,9 +178,12 @@ namespace AutoNet
         
         static BOOL ResetConnectionData(NetSocket* pNetSock, ConnectionData* pConData);
 
+        static void GetAddrInfo(sockaddr_in& addr, CHAR* szIP, SHORT uSize, UINT& uPort);
+
+        static INT  GetError();
     private:
 #if PLATEFORM_TYPE == PLATFORM_WIN32
-        static BOOL WinInit(NetSocket* pNetSock);
+        static BOOL WinInit(NetSocket* pNetSock, WORD uPort, const CHAR* szIP);
         static BOOL WinClose(NetSocket* pNetSock);
         static BOOL WinStartListen(NetSocket* pNetSock, DWORD nThreadNum);
         static BOOL WinStartConnect(NetSocket* pNetSock);
@@ -183,9 +191,10 @@ namespace AutoNet
         static BOOL WinRecv(NetSocket* pNetSock, ConnectionData* pConData);
         static BOOL WinResetConnectionData(NetSocket* pNetSock, ConnectionData* pConData);
 #elif PLATEFORM_TYPE == PLATFORM_LINUX
-        static BOOL LinuxInit(NetSocket* pNetSock);
+        static BOOL LinuxInit(NetSocket* pNetSock, WORD uPort, const CHAR* szIP);
         static BOOL LinuxClose(NetSocket* pNetSock);
         static BOOL LinuxStartListen(NetSocket* pNetSock);
+        static BOOL LinuxStartConnect(NetSocket* pNetSock);
         static BOOL LinuxSend(ConnectionData* pConData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes);
         static BOOL LinuxRecv(NetSocket* pNetSock, ConnectionData* pConData);
         static BOOL LinuxResetConnectionData(NetSocket* pNetSock, ConnectionData* pConData);

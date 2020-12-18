@@ -7,7 +7,6 @@ namespace AutoNet
 
 #ifndef _WIN32
 #define PLATEFORM_TYPE PLATFORM_LINUX
-#define HANDLE int
 #endif
 
 #ifndef __linux
@@ -38,5 +37,12 @@ namespace AutoNet
 
     typedef unsigned int        SESSION_ID;
     typedef void*               LPVOID;
+
+#if PLATEFORM_TYPE == PLATFORM_WIN32
+#elif PLATEFORM_TYPE == PLATFORM_LINUX
+    #define SOCKET int
+    #define INVALID_SOCKET -1
+    #define HANDLE int
+#endif
 
 }

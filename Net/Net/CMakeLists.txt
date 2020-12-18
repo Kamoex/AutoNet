@@ -36,6 +36,7 @@ source_group(Memeory
 
 set(CommonSource
     TypeDef.h
+    NetDef.h
     Assert.h
 )
 source_group(Common

@@ -19,15 +19,16 @@ namespace AutoNet
 
     BOOL BaseServer::Init()
     {
-        CHAR* szAddr = "0.0.0.0";
-        if (!m_Socket.Init(this, m_uPort, szAddr, m_nMaxSessions))
+        // TODO 读取配置
+        m_strIP = "0.0.0.0";
+        if (!m_Socket.Init(this, m_nMaxSessions))
             return FALSE;
         return TRUE;
     }
 
     BOOL BaseServer::Run()
     {
-        if (!m_Socket.StartListen())
+        if (!m_Socket.StartListen(m_uPort, m_strIP.c_str()))
             return FALSE;
 
         printf("server run success!\n");
@@ -39,94 +40,53 @@ namespace AutoNet
         return TRUE;
     }
 
-    void BaseServer::OnAccept(ConnectionData* pData)
+    ENetRes BaseServer::OnAccept(ConnectionData* pConnectionData)
     {
-        ASSERTV(pData);
+        ASSERTN(pConnectionData, E_NET_INVALID_VALUE);
 
-        //SESSION_ID uID = ++m_nIncrement;
-        SESSION_ID uID = pData->m_sock;
-        m_mapConnections[uID] = pData;
-        pData->m_uID = uID;
+        // TODO 对象池
+        Connector* pConnecter = new Connector;
+        ASSERTN(pConnecter, E_NET_INVALID_VALUE);
+
+        SESSION_ID uID = ++m_nIncrement;
+        // todo 加锁
+        m_mapConnections[uID] = pConnecter;
+        pConnecter->Init(uID, pConnectionData);
 
         // TODO DEBUG
-        printf("a new client connected!!! id: %d\n", uID);
-        
+        printf("a new client connected!!! id: %d ip: %s port: %d\n", uID, pConnecter->GetIP(), pConnecter->GetPort());
+        return E_NET_SUC;
     }
 
-    void BaseServer::OnRecved(ConnectionData* pData)
+    ENetRes BaseServer::OnDisConnected(ConnectionData* pConnectionData)
     {
-        ASSERTVLOG(pData && pData->m_pRecvRingBuf, "BaseServer::ProcedureRecvMsg m_pRecvRingBuf is null \n");
+        ASSERTN(pConnectionData, E_NET_DISCONNECTED_HDL_FAILED)
+        INT nErr = SocketAPI::GetError();
+        LOGERROR("a client disconnected! err: %d ", nErr);
+        return Kick(pConnectionData);
+    }
 
-        // 修正写入位置
-        pData->m_pRecvRingBuf->SkipWrite(pData->m_dwRecved);
+    ENetRes BaseServer::OnRecved(ConnectionData* pConnectionData, CHAR* pMsg)
+    {
+        ASSERTN(pConnectionData && pMsg, E_NET_INVALID_VALUE);
 
-        INT& nMsgLen = pData->m_pMsgHead->m_nLen;
-        pData->m_dwMsgBodyRecved += pData->m_dwRecved;
+        // TODO 把收到的完整的buffer丢到处理队列中
 
-        while (true)
-        {
-            if (!pData->m_pMsgHead)
-            {
-                printf("BaseServer::ProcedureRecvMsg pData->m_pMsgHead is null \n");
-                break;
-            }
-
-            // 检测消息头是否需要解析
-            if (nMsgLen == 0)
-            {
-                if (!pData->m_pRecvRingBuf->Read((CHAR*)pData->m_pMsgHead, sizeof(MsgHead)))
-                    break;
-                else
-                    pData->m_dwMsgBodyRecved -= sizeof(MsgHead);
-            }
-
-            // 接收的长度不够 不解析消息体
-            if (pData->m_dwMsgBodyRecved < (DWORD)nMsgLen)
-                break;
-
-            // 把msgBody放入到队列中 先这么写 TODO 从内存池里申请
-            CHAR* pMsgBody = new char[nMsgLen];
-            if (!pData->m_pRecvRingBuf->Read(pMsgBody, nMsgLen))
-            {
-                SAFE_DELETE_ARRY(pMsgBody);
-                break;
-            }
-
-            printf("recved: %s \n", pMsgBody);
-            SAFE_DELETE_ARRY(pMsgBody);
-            pData->m_dwMsgBodyRecved -= nMsgLen;
-            nMsgLen = 0;
-
-            /*static const INT MSGSIZE1 = 1;
-            static const INT MSGSIZE = 10;
-            char sendbuf[MSGSIZE1][MSGSIZE] = {};
-            int nTemp = 0;
-            for (int i = 0; i < MSGSIZE1; i++)
-            {
-            ZeroMemory(sendbuf[i], MSGSIZE);
-            for (int j = 0; j < MSGSIZE; j++)
-            {
-            sendbuf[i][j] = 48 + (nTemp % 48);
-            }
-            nTemp = ++nTemp <= 9 ? nTemp : 0;
-            pData->m_pSendRingBuf->Write(&sendbuf[i][0], MSGSIZE);
-            SendMsg(pData->m_uID);
-            }*/
-
-            if (pData->m_dwMsgBodyRecved == 0)
-                break;
-        }
-
-        memset(pData->m_RecvBuf, 0, CONN_BUF_SIZE);
+        return E_NET_SUC;
     }
 
     void BaseServer::SendMsg(SESSION_ID uID)
     {
         auto it = m_mapConnections.find(uID);
         if (it == m_mapConnections.end())
+        {
+            LOGERROR("BaseServer::SendMsg not find the connector!");
             return;
+        }
 
-        ConnectionData* pData = it->second;
+        Connector* pConnector = it->second;
+        ASSERTV(pConnector);
+        ConnectionData* pData = pConnector->GetConnectionData();
         ASSERTV(pData && pData->m_pSendRingBuf);
 
         DWORD uSendedBytes = 0;
@@ -160,14 +120,52 @@ namespace AutoNet
         }
     }
 
-    void BaseServer::Kick(ConnectionData* pData)
+    ENetRes BaseServer::Kick(ConnectionData* pConnectionData)
     {
-        ASSERTV(pData);
+        ASSERTN(pConnectionData, E_NET_INVALID_VALUE);
+        Connector* pConnector = GetConnector(pConnectionData->m_uSessionID);
+        if (pConnector)
+        {
+            ConnectionData* pConData = pConnector->GetConnectionData();
+            ASSERTN(pConData, E_NET_KICK_FAILED);
+            ASSERTN(m_Socket.Kick(pConData), E_NET_KICK_FAILED);
+            pConnector->CleanUp();
+            m_mapConnections.erase(pConnectionData->m_uSessionID);
+            printf("client kicked!!! id: %d \n", pConData->m_uSessionID);
+        }
+        return E_NET_SUC;
+    }
 
-        m_mapConnections.erase(pData->m_uID);
+    ENetRes BaseServer::HandleRes(ENetRes eRes, void* pParam)
+    {
+        ASSERTN(pParam, E_NET_INVALID_VALUE);
+        ENetRes eHdlRes = E_NET_SUC;
+        INT nErr = SocketAPI::GetError();
+        switch (eRes)
+        {
+        // 缓存溢出
+        case AutoNet::E_NET_BUF_OVER_FLOW:
+            eHdlRes = Kick((ConnectionData*)pParam);
+            break;
+        // 断开连接
+        case AutoNet::E_NET_DISCONNECTED:
+            eHdlRes = OnDisConnected((ConnectionData*)pParam);
+            break;
+        // 发送失败
+        case AutoNet::E_NET_SEND_FAILED:
+            eHdlRes = E_NET_SEND_FAILED;
+            break;
+        default:
+            eHdlRes = E_NET_NONE_ERR;
+            break;
+        }
+        
+        if (eHdlRes != E_NET_SUC)
+        {
+            LOGERROR("BaseServer::HandleError error! inRes: %d, err: %d, HdlRes: %d, err: %d", eRes, nErr, eHdlRes, SocketAPI::GetError());
+        }
 
-        // TODO DEBUG
-        printf("client kicked!!! id: %d \n", pData->m_uID);
+        return eHdlRes;
     }
 
     void BaseServer::CleanUp()
@@ -181,7 +179,7 @@ namespace AutoNet
         m_Socket.CleanUp();
     }
 
-    ConnectionData* BaseServer::GetConnectionData(SESSION_ID uID)
+    Connector* BaseServer::GetConnector(SESSION_ID uID)
     {
         auto it = m_mapConnections.find(uID);
         if (it == m_mapConnections.end())
