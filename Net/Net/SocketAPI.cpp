@@ -167,13 +167,16 @@ namespace AutoNet
                 printf("new client connected! sock: %d ip: %s:%d\n", pConData->m_sock, inet_ntoa(pConData->m_addr.sin_addr), ntohs(pConData->m_addr.sin_port));
 
                 pNetSocket->OnAccepted(pConData);
+                if (!CreateIoCompletionPort((HANDLE)pConData->m_sock, hCompeltePort, (ULONG_PTR)pConData, 0))
+                {
+                    ASSERTN(NULL, FALSE, printf("EIO_ACCEPT CreateIoCompletionPort error: %d", WSAGetLastError()); Close(pNetSock))
+                }
                 break;
             }
             case EIO_READ:
             {
                 pConData->m_dwRecved = dwTransBytes;
                 pNetSocket->OnRecved(pConData);
-
                 //if (dwTransBytes > CONN_BUF_SIZE)
                 //{
                 //    printf("Recv msg over the limit. max: %d, recv: %d\n", CONN_BUF_SIZE, dwTransBytes);

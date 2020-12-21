@@ -62,7 +62,7 @@ namespace AutoNet
 
             m_dwUnWriteSize -= dwSize;
             m_dwUnReadSize += dwSize;
-            return true;
+            return TRUE;
         }
 
         BOOL Read(CHAR* pBuf, const DWORD nSize)
@@ -92,7 +92,34 @@ namespace AutoNet
 
             m_dwUnReadSize -= nSize;
             m_dwUnWriteSize += nSize;
-            return true;
+            return TRUE;
+        }
+
+        // 读取一块儿内存 但是不改变指针位置
+        BOOL Peek(CHAR* pBuf, const DWORD nSize)
+        {
+            if (!pBuf || nSize == 0)
+                return FALSE;
+
+            if (m_dwUnReadSize <= 0)
+                return FALSE;
+
+            if (nSize > m_dwUnReadSize)
+                return FALSE;
+
+            if (m_pRead + nSize > m_pEnd)
+            {
+                size_t uFirstSize = m_pEnd - m_pRead;
+                size_t uSecondSize = nSize - uFirstSize;
+                memcpy(pBuf, m_pRead, uFirstSize);
+                memcpy(pBuf + uFirstSize, m_pBuf, uSecondSize);
+            }
+            else
+            {
+                memcpy(pBuf, m_pRead, nSize);
+            }
+
+            return TRUE;
         }
 
         // 用于直接获取了内存写入的情况
@@ -120,7 +147,7 @@ namespace AutoNet
 
             m_dwUnWriteSize -= dwSize;
             m_dwUnReadSize += dwSize;
-            return true;
+            return TRUE;
         }
 
         CHAR* GetWritePos(DWORD& uLen)

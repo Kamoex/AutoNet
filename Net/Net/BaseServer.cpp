@@ -140,6 +140,8 @@ namespace AutoNet
     {
         ASSERTN(pParam, E_NET_INVALID_VALUE);
         ENetRes eHdlRes = E_NET_SUC;
+        if (eRes == E_NET_SUC)
+            return eHdlRes;
         INT nErr = SocketAPI::GetError();
         switch (eRes)
         {

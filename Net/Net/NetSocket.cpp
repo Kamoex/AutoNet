@@ -99,37 +99,33 @@ namespace AutoNet
 
             while (true)
             {
-                // 把msgBody放入到队列中 先这么写 TODO 从内存池里申请
-                CHAR* pMsg = NULL;
                 // 检测消息头是否需要解析
                 if (nMsgLen == 0)
                 {
-                    pMsg = new CHAR[sizeof(MsgHead)];
-                    if (!pConnectionData->m_pRecvRingBuf->Read(pMsg, sizeof(MsgHead)))
-                    {
-                        SAFE_DELETE_ARRY(pMsg);
+                    if (!pConnectionData->m_pRecvRingBuf->Peek((CHAR*)pConnectionData->m_pMsgHead, sizeof(MsgHead)))
                         break;
-                    }
                 }
 
                 // 接收的长度不够 不解析消息体
                 if (pConnectionData->m_dwSingleMsgRecved < (DWORD)nMsgLen)
                     break;
                 
-                if (nMsgLen != 0)
-                {
-                    // TODO 内存池
-                    pMsg = new CHAR[nMsgLen];
-                }
+                // TODO 内存池
+                CHAR* pMsg = new CHAR[nMsgLen];
 
-                if (!pConnectionData->m_pRecvRingBuf->Read(pMsg + sizeof(MsgHead), nMsgLen - sizeof(MsgHead)))
+                if (!pConnectionData->m_pRecvRingBuf->Read(pMsg, nMsgLen))
                 {
                     SAFE_DELETE_ARRY(pMsg);
                     break;
                 }
 
-                printf("recved: %s \n", pMsg);
-                SAFE_DELETE_ARRY(pMsg);
+                // TODO DEL TEST
+                MsgHead* pHead = (MsgHead*)pMsg;
+                CHAR* msgBody = new CHAR[nMsgLen - sizeof(MsgHead)];
+                memcpy(msgBody, pMsg + sizeof(MsgHead), nMsgLen - sizeof(MsgHead));
+                printf("recved msg_head: id: %d, size: %d msgbody: %s \n", pHead->m_nMsgID, pHead->m_nMsgLen, msgBody);
+                SAFE_DELETE_ARRY(msgBody);
+
                 pConnectionData->m_dwSingleMsgRecved -= nMsgLen;
                 nMsgLen = 0;
 
@@ -152,6 +148,7 @@ namespace AutoNet
                 memset(pConnectionData->m_RecvBuf, 0, CONN_BUF_SIZE);
 
                 m_pNet->OnRecved(pConnectionData, pMsg);
+                SAFE_DELETE_ARRY(pMsg);
 
                 if (pConnectionData->m_dwSingleMsgRecved == 0)
                     break;
