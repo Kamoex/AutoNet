@@ -12,9 +12,9 @@ namespace AutoNet
 #define ASSERTVOP(expr, OP) if(!(expr)) {assert(NULL); OP; return;}
 #define ASSERTNOP(expr, N, OP) if(!(expr)) {assert(NULL); OP; return (N);}
 
-#define ASSERTLOG(expr, fmt, ...) if(!(expr)) {LOGERROR(fmt, __VA_ARGS__); assert(NULL);}
-#define ASSERTVLOG(expr, fmt, ...) if(!(expr)) {LOGERROR(fmt, __VA_ARGS__); assert(NULL); return;}
-#define ASSERTNLOG(expr, N, fmt, ...) if(!(expr)) {LOGERROR(fmt, __VA_ARGS__); assert(NULL); return (N);}
+#define ASSERTLOG(expr, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); printf("\n"); assert(NULL);}
+#define ASSERTVLOG(expr, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); printf("\n"); assert(NULL); return;}
+#define ASSERTNLOG(expr, N, fmt, ...) if(!(expr)) {printf(fmt, ##__VA_ARGS__); printf("\n"); assert(NULL); return (N);}
 
 #define LOGERROR(fmt, ...) printf(fmt, ##__VA_ARGS__); printf("\n");
 }

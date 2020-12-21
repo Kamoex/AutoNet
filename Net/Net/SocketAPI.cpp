@@ -574,7 +574,7 @@ namespace AutoNet
 
     BOOL SocketAPI::LinuxStartConnect(NetSocket* pNetSock)
     {
-        if (connect(pNetSock->m_ListenSock, (const sockaddr*)pNetSock->m_Addr, sizeof(pNetSock->m_Addr)) < 0)
+        if (connect(pNetSock->m_ListenSock, (const sockaddr*)&pNetSock->m_Addr, sizeof(pNetSock->m_Addr)) < 0)
         {
             LOGERROR("send error: %d", errno);
             ASSERTN(NULL, FALSE);
@@ -638,6 +638,7 @@ namespace AutoNet
         epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pConData->m_sock, &ev);
         pConData->CleanUp();
         // TODO 将pCondata放入对象池
+        return TRUE;
     }
 
 
