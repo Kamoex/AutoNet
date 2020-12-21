@@ -42,7 +42,7 @@ namespace AutoNet
         ASSERTN(pConnectionData, E_NET_INVALID_VALUE);
         m_pData = pConnectionData;
         printf("connected success! addres: %s:%d \n", m_szIP.c_str(), m_uPort);
-
+        /*
 #define MSGSIZE 10
         char buf[MSGSIZE][MSGSIZE] = {};
         int nTemp = 0;
@@ -69,6 +69,7 @@ namespace AutoNet
             SendMsg(wsaBuf.buf, wsaBuf.len);
             printf("send msg: %s,bytes: %llu\n", sendBuf, sizeof(wsaBuf.len));
         }
+        */
     }
 
     ENetRes Connector::OnDisConnected(ConnectionData* pConnectionData)
