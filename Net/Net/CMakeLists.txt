@@ -44,10 +44,15 @@ source_group(Common
     ${CommonSource}
 )
 
+set(Test
+    test.cpp
+)
+
 add_executable(Net
 ${NetSource}
 ${MemorySource}
 ${CommonSource}
+${Test}
 )
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/VSBuild)

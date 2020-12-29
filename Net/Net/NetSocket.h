@@ -9,8 +9,6 @@
 
 namespace AutoNet
 {
-
-
     class Connector;
     class NetSocket
     {

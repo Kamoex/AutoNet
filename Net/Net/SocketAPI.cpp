@@ -1,8 +1,6 @@
 #include "SocketAPI.h"
 #include "NetSocket.h"
 #include "Assert.h"
-#include "Connector.h"
-
 
 namespace AutoNet
 {
