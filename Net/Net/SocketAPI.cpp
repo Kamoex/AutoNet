@@ -295,7 +295,7 @@ namespace AutoNet
         {
             HANDLE nThreadID = CreateThread(NULL, NULL, WorkThread, pNetSock, NULL, NULL);
             ASSERTOP(nThreadID > 0, printf("CreateThread error!\n"); continue);
-            pNetSock->m_vecWorkThread.push_back(nThreadID);
+            pNetSock->m_vecWorkThread.emplace_back(nThreadID);
         }
 
         // 初始化连接 TODO连接池

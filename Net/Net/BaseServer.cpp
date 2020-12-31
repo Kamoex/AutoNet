@@ -71,7 +71,8 @@ namespace AutoNet
         ASSERTN(pConnectionData && pMsg, E_NET_INVALID_VALUE);
 
         // TODO 把收到的完整的buffer丢到处理队列中
-
+        // 多个线程写入，一个线程读取的任务队列
+        //m_msgQueue.Produce(pMsg)
         return E_NET_SUC;
     }
 

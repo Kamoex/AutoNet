@@ -4,6 +4,7 @@
 #include "Net.h"
 #include <atomic>
 #include <map>
+#include "FastQueue.h"
 
 namespace AutoNet
 {
@@ -46,5 +47,6 @@ namespace AutoNet
         NetSocket                               m_Socket;
         std::atomic<DWORD>                      m_nIncrement;       // 自增ID(以后优化)
         std::map<SESSION_ID, Connector*>        m_mapConnections;   // 已连接的session TODO 加锁 后续优化成hashmap 否则会很慢
+        FastSafeQueue<int>                      m_msgQueue;
     };
 }
