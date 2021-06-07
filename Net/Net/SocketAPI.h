@@ -62,17 +62,17 @@ namespace AutoNet
                 m_nReuseAddr = 1;
                 m_bDontLinger = TRUE;
             }
-            INT     m_nReuseAddr;   // ¶Ë¿ÚÖØÓÃ
-            BOOL    m_bDontLinger;  // closeºó¿´Çé¿ö·¢ËÍÊı¾İ
+            INT     m_nReuseAddr;   // ç«¯å£é‡ç”¨
+            BOOL    m_bDontLinger;  // closeåçœ‹æƒ…å†µå‘é€æ•°æ®
         };
 
         WORD                        m_WSAVersion;
         WSADATA                     m_WSAData;
-        HANDLE                      m_completHandle;            // Íê³É¶Ë¿Ú¾ä±ú
-        LPFN_ACCEPTEX               m_pAcceptEx;                // acceptexº¯ÊıÖ¸Õë
-        LPFN_GETACCEPTEXSOCKADDRS   m_pAcceptExAddrs;           // acceptexaddrº¯ÊıÖ¸Õë
-        LPFN_CONNECTEX              m_pConnectEx;               // connectexº¯ÊıÖ¸Õë
-        FSocketOpt                  m_operation;                // socketÉèÖÃ
+        HANDLE                      m_completHandle;            // å®Œæˆç«¯å£å¥æŸ„
+        LPFN_ACCEPTEX               m_pAcceptEx;                // acceptexå‡½æ•°æŒ‡é’ˆ
+        LPFN_GETACCEPTEXSOCKADDRS   m_pAcceptExAddrs;           // acceptexaddrå‡½æ•°æŒ‡é’ˆ
+        LPFN_CONNECTEX              m_pConnectEx;               // connectexå‡½æ•°æŒ‡é’ˆ
+        FSocketOpt                  m_operation;                // socketè®¾ç½®
     };
 
 #elif PLATEFORM_TYPE == PLATFORM_LINUX
@@ -85,14 +85,14 @@ namespace AutoNet
                 m_nReuseAddr = 1;
                 m_bDontLinger = TRUE;
 }
-            INT     m_nReuseAddr;   // ¶Ë¿ÚÖØÓÃ
-            BOOL    m_bDontLinger;  // closeºó¿´Çé¿ö·¢ËÍÊı¾İ
+            INT     m_nReuseAddr;   // ç«¯å£é‡ç”¨
+            BOOL    m_bDontLinger;  // closeåçœ‹æƒ…å†µå‘é€æ•°æ®
         };
 
         INT         mEpollFd;
         epoll_event mEv;
         epoll_event mEpollEvents[MAX_SESSIONS];
-        FSocketOpt                  m_operation;                // socketÉèÖÃ
+        FSocketOpt                  m_operation;                // socketè®¾ç½®
     };
 #endif
     

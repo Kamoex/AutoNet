@@ -126,7 +126,7 @@ namespace AutoNet
                 if (FALSE == WSAGetOverlappedResult(pNetSocket->GetListenSocket(), pOverlapped, &dwTransBytes, FALSE, &pConData->m_dwFlags))
                     nError = WSAGetLastError();
 
-                // Á¬½Ó¶Ë±»Ç¿ÖÆ¶Ï¿ª
+                // è¿æ¥ç«¯è¢«å¼ºåˆ¶æ–­å¼€
                 if (nError == WSAECONNRESET)
                 {
                     pNet->OnDisConnected(pConData);
@@ -145,14 +145,14 @@ namespace AutoNet
             {
             case EIO_CONNECT:
             {
-                // ¸üĞÂsocketÏà¹ØÊôĞÔ ·ñÔògetpeername»áÈ¡²»µ½ÕıÈ·ÄÚÈİ
+                // æ›´æ–°socketç›¸å…³å±æ€§ å¦åˆ™getpeernameä¼šå–ä¸åˆ°æ­£ç¡®å†…å®¹
                 setsockopt(pNetSocket->GetListenSocket(), SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
                 pNetSocket->OnConnected(pConData);
                 break;
             }
             case EIO_ACCEPT:
             {
-                // ¼Ì³ĞLIstenSocketµÄÒ»Ğ©ÊôĞÔ ÓÃÓÚÒ»Ğ©º¯ÊıµÄµ÷ÓÃ³É¹¦ ±ÈÈçshutdown
+                // ç»§æ‰¿LIstenSocketçš„ä¸€äº›å±æ€§ ç”¨äºä¸€äº›å‡½æ•°çš„è°ƒç”¨æˆåŠŸ æ¯”å¦‚shutdown
                 setsockopt(pConData->m_sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (const CHAR*)&pNetSocket->GetListenSocket(), sizeof(SOCKET));
                 setsockopt(pConData->m_sock, SOL_SOCKET, SO_DONTLINGER, (const CHAR*)&pNetSocket->GetSocketData().m_operation.m_bDontLinger, sizeof(BOOL));
 
@@ -182,7 +182,7 @@ namespace AutoNet
                 //    return -1;
                 //}
 
-                //// Á¬½Ó¶ËÒÑ¶Ï¿ªÁ¬½Ó
+                //// è¿æ¥ç«¯å·²æ–­å¼€è¿æ¥
                 //if (dwTransBytes == 0)
                 //    pNetSocket->Kick(pConData);
                 //else
@@ -204,7 +204,7 @@ namespace AutoNet
                     return -1;
                 }
                 pNetSocket->OnSended(pConData);
-                // ÒÑ¾­·¢ËÍÍê³É ½«´ËÏß³ÌµÄ×´Ì¬ÉèÖÃÎª¿É½ÓÊÕ
+                // å·²ç»å‘é€å®Œæˆ å°†æ­¤çº¿ç¨‹çš„çŠ¶æ€è®¾ç½®ä¸ºå¯æ¥æ”¶
                 pConData->m_nType = EIO_READ;*/
                 break;
             }
@@ -222,7 +222,7 @@ namespace AutoNet
         INT nResult = WSAStartup(pNetSock->GetSocketData().m_WSAVersion, &pNetSock->GetSocketData().m_WSAData);
 
         ASSERTNOP(nResult == 0, FALSE, printf("WSAStartup error: %d\n", WSAGetLastError()); Close(pNetSock));
-        // TODO IPV6 ËµÃ÷:ÕâÀïÆäÊµ¿ÉÒÔÓÃAF_UNSPEC È»ºóÓÃaddrinfoÀ´¶¯Ì¬ÊÊÅäIPV4 »ò IPV6
+        // TODO IPV6 è¯´æ˜:è¿™é‡Œå…¶å®å¯ä»¥ç”¨AF_UNSPEC ç„¶åç”¨addrinfoæ¥åŠ¨æ€é€‚é…IPV4 æˆ– IPV6
 		pNetSock->m_Addr.sin_family = AF_INET;
         pNetSock->m_Addr.sin_port = htons(uPort);
         if (strcmp(szIP, "") == 0)
@@ -234,7 +234,7 @@ namespace AutoNet
 
         ASSERTNOP(pNetSock->m_ListenSock != INVALID_SOCKET, FALSE, printf("WSASocket error: %d\n", WSAGetLastError()); Close(pNetSock));
 
-        // ¶Ë¿ÚÖØÓÃ(·ÀÖ¹closesocketÒÔºó µ±Ç°Á¬½Ó»á²úÉútime-waite×´Ì¬(»á³ÖĞø1-2·ÖÖÓ) µ¼ÖÂÖØĞÂ°ó¶¨Ê±»áÌáÊ¾address alredy in use)
+        // ç«¯å£é‡ç”¨(é˜²æ­¢closesocketä»¥å å½“å‰è¿æ¥ä¼šäº§ç”Ÿtime-waiteçŠ¶æ€(ä¼šæŒç»­1-2åˆ†é’Ÿ) å¯¼è‡´é‡æ–°ç»‘å®šæ—¶ä¼šæç¤ºaddress alredy in use)
         if (setsockopt(pNetSock->m_ListenSock, SOL_SOCKET, SO_REUSEADDR, (const CHAR*)&pNetSock->GetSocketData().m_operation.m_nReuseAddr, sizeof(pNetSock->GetSocketData().m_operation.m_nReuseAddr)) == SOCKET_ERROR)
         {
             printf("setsockopt set SO_REUSEADDR error: %d\n", WSAGetLastError());
@@ -255,10 +255,10 @@ namespace AutoNet
 
     BOOL SocketAPI::WinStartListen(NetSocket* pNetSock, DWORD nThreadNum)
     {
-        // SO_REUSEPORT ¶à¸ö½ø³Ì»òÏß³Ì°ó¶¨Í¬Ò»IP¶Ë¿Ú ÓÉÄÚºË¸ºÔØ¾ùºâ ·ÀÖ¹¾ªÈºĞ§Ó¦
+        // SO_REUSEPORT å¤šä¸ªè¿›ç¨‹æˆ–çº¿ç¨‹ç»‘å®šåŒä¸€IPç«¯å£ ç”±å†…æ ¸è´Ÿè½½å‡è¡¡ é˜²æ­¢æƒŠç¾¤æ•ˆåº”
         //setsockopt(m_Sock, SOL_SOCKET, SO_REUSEPORT, (const CHAR*)&nReuseAddr, sizeof(nReuseAddr))
 
-        // ´´½¨Íê³É¶Ë¿Ú
+        // åˆ›å»ºå®Œæˆç«¯å£
         pNetSock->GetSocketData().m_completHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
         ASSERTNOP(pNetSock->GetSocketData().m_completHandle, FALSE, printf("WinStartListen::CreateIoCompletionPort error: %d\n", WSAGetLastError()); Close(pNetSock))
 
@@ -268,17 +268,17 @@ namespace AutoNet
         if (::listen(pNetSock->m_ListenSock, SOMAXCONN_HINT(1)) == SOCKET_ERROR)
             ASSERTNOP(NULL, FALSE, printf("WinStartListen::listen error: %d\n", WSAGetLastError()); Close(pNetSock))
 
-        // Í¶µİ¼àÌı
+        // æŠ•é€’ç›‘å¬
         if (!CreateIoCompletionPort((HANDLE)pNetSock->m_ListenSock, pNetSock->GetSocketData().m_completHandle, 0, 0))
             ASSERTNOP(NULL, FALSE, printf("WinStartListen::CreateIoCompletionPort step 2 error: %d\n", WSAGetLastError()); Close(pNetSock))
 
-        // »ñÈ¡acceptexÖ¸Õë
+        // è·å–acceptexæŒ‡é’ˆ
         GUID GuidAcceptEx = WSAID_ACCEPTEX;
         DWORD dwAccepteExBytes = 0;
         if (WSAIoctl(pNetSock->m_ListenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidAcceptEx, sizeof(GuidAcceptEx), &pNetSock->GetSocketData().m_pAcceptEx, sizeof(pNetSock->GetSocketData().m_pAcceptEx), &dwAccepteExBytes, NULL, NULL) == SOCKET_ERROR)
             ASSERTNOP(NULL, FALSE, printf("WinStartListen::WSAIoctl get AcceptEx error: %d\n", WSAGetLastError()); Close(pNetSock))
         
-            // »ñÈ¡acceptexAddrÖ¸Õë »ñÈ¡remoteaddrÊ± ²»ÓÃ×Ô¼ºÔÙÈ¥½âÎöacceptexµÄ»º³åÇø
+            // è·å–acceptexAddræŒ‡é’ˆ è·å–remoteaddræ—¶ ä¸ç”¨è‡ªå·±å†å»è§£æacceptexçš„ç¼“å†²åŒº
         GUID GuidAddrEx = WSAID_GETACCEPTEXSOCKADDRS;
         DWORD dwAddrBytes = 0;
         if (WSAIoctl(pNetSock->m_ListenSock, SIO_GET_EXTENSION_FUNCTION_POINTER, &GuidAddrEx, sizeof(GuidAddrEx), &pNetSock->GetSocketData().m_pAcceptExAddrs, sizeof(pNetSock->GetSocketData().m_pAcceptExAddrs), &dwAddrBytes, NULL, NULL) == SOCKET_ERROR)
@@ -298,7 +298,7 @@ namespace AutoNet
             pNetSock->m_vecWorkThread.emplace_back(nThreadID);
         }
 
-        // ³õÊ¼»¯Á¬½Ó TODOÁ¬½Ó³Ø
+        // åˆå§‹åŒ–è¿æ¥ TODOè¿æ¥æ± 
         for (INT i = 0; i < pNetSock->m_nMaxConnectionsNums; i++)
         {
             ConnectionData* pConnectionData = new ConnectionData;
@@ -327,12 +327,12 @@ namespace AutoNet
 
     BOOL SocketAPI::WinStartConnect(NetSocket* pNetSock)
     {
-        // ´´½¨Íê³É¶Ë¿Ú
+        // åˆ›å»ºå®Œæˆç«¯å£
         pNetSock->GetSocketData().m_completHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
         ASSERTNOP(pNetSock->GetSocketData().m_completHandle != INVALID_HANDLE_VALUE, FALSE, printf("NetSocket::StartConnect CreateIoCompletionPort error: %d\n", WSAGetLastError()); Close(pNetSock));
 
-        // ĞèÒª¸ø±¾µØsocket°ó¶¨Ò»¸öaddr£¨²»¿ÉÒÔ°ó¶¨server¶ËµÄaddrĞÅÏ¢,ÒòÎªÕâÊÇÄã±¾»úµÄsocket,ĞèÒª°ó¶¨Äã±¾»úµÄĞÅÏ¢£©
+        // éœ€è¦ç»™æœ¬åœ°socketç»‘å®šä¸€ä¸ªaddrï¼ˆä¸å¯ä»¥ç»‘å®šserverç«¯çš„addrä¿¡æ¯,å› ä¸ºè¿™æ˜¯ä½ æœ¬æœºçš„socket,éœ€è¦ç»‘å®šä½ æœ¬æœºçš„ä¿¡æ¯ï¼‰
         sockaddr_in temp;
         temp.sin_family = AF_INET;
         temp.sin_port = htons(0);
@@ -351,13 +351,13 @@ namespace AutoNet
 
         pNetSock->m_vecWorkThread.push_back(nThreadID);
 
-        // TODO´Ó¶ÔÏó³ØÖĞÈ¡
+        // TODOä»å¯¹è±¡æ± ä¸­å–
         ConnectionData* pData = new ConnectionData;
         ASSERTN(pData, FALSE);
         pData->m_nType = EIO_CONNECT;
         pData->m_sock = pNetSock->m_ListenSock;
 
-        // Í¶µİ¼àÌı
+        // æŠ•é€’ç›‘å¬
         if (CreateIoCompletionPort((HANDLE)pNetSock->m_ListenSock, pNetSock->GetSocketData().m_completHandle, (ULONG_PTR)pData, 0) == NULL)
         {
             ASSERTLOG(NULL, "WinStartConnect::CreateIoCompletionPort error: %d\n", WSAGetLastError());
@@ -379,7 +379,7 @@ namespace AutoNet
 
     BOOL SocketAPI::WinSend(ConnectionData* pConData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes)
     {
-        // ÕâÀïĞèÒªÉèÖÃÏÂÀàĞÍ Èç¹û²»ÉèÖÃ Ôò×Ô¼º»áÊÕ¸ø¶Ô·½µ½·¢ËÍµÄÊı¾İ(ÒòÎª´ËÊ±»¹Î´·¢ËÍÍê³É,»áµ¼ÖÂÆäËûÏß³Ì´Ó»º´æÇøÀï¶ÁÈ¡µ½Êı¾İ)
+        // è¿™é‡Œéœ€è¦è®¾ç½®ä¸‹ç±»å‹ å¦‚æœä¸è®¾ç½® åˆ™è‡ªå·±ä¼šæ”¶ç»™å¯¹æ–¹åˆ°å‘é€çš„æ•°æ®(å› ä¸ºæ­¤æ—¶è¿˜æœªå‘é€å®Œæˆ,ä¼šå¯¼è‡´å…¶ä»–çº¿ç¨‹ä»ç¼“å­˜åŒºé‡Œè¯»å–åˆ°æ•°æ®)
         pConData->m_nType = EIO_WRITE;
 
         WSABUF wsaBuf;
@@ -442,7 +442,7 @@ namespace AutoNet
             inet_pton(AF_INET, szIP, &pNetSock->m_Addr.sin_addr);
 
         socklen_t paramLen = sizeof(pNetSock->GetSocketData().m_operation.m_nReuseAddr);
-		// ¶Ë¿ÚÖØÓÃ(·ÀÖ¹closesocketÒÔºó µ±Ç°Á¬½Ó»á²úÉútime-waite×´Ì¬(»á³ÖĞø1-2·ÖÖÓ) µ¼ÖÂÖØĞÂ°ó¶¨Ê±»áÌáÊ¾address alredy in use)
+		// ç«¯å£é‡ç”¨(é˜²æ­¢closesocketä»¥å å½“å‰è¿æ¥ä¼šäº§ç”Ÿtime-waiteçŠ¶æ€(ä¼šæŒç»­1-2åˆ†é’Ÿ) å¯¼è‡´é‡æ–°ç»‘å®šæ—¶ä¼šæç¤ºaddress alredy in use)
         if (setsockopt(pNetSock->m_ListenSock, SOL_SOCKET, SO_REUSEADDR, &(pNetSock->GetSocketData().m_operation.m_nReuseAddr), paramLen) < 0)
 		{
             LOGERROR("setsockopt set SO_REUSEADDR error: %d", errno);
@@ -450,7 +450,7 @@ namespace AutoNet
             ASSERTN(NULL, FALSE);
 		}
 
-        // ÉèÖÃ·Ç×èÈû
+        // è®¾ç½®éé˜»å¡
         if (SetSockBlocking(pNetSock->m_ListenSock, FALSE) < 0)
         {
             Close(pNetSock);
@@ -528,7 +528,7 @@ namespace AutoNet
                         ASSERTOP(NULL, continue);
                     }
 
-                    // TODO ¶ÔÏó³Ø
+                    // TODO å¯¹è±¡æ± 
                     ConnectionData* pConData = new ConnectionData;
                     ASSERTOP(pConData, continue);
                     pConData->m_sock = peerSock;
@@ -543,7 +543,7 @@ namespace AutoNet
                         LOGERROR("accept epoll_ctl error: %d", errno);
                         ASSERTOP(NULL, continue);
                     }
-                    // TODO ·ÅÔÚµ÷ÓÃ´¦
+                    // TODO æ”¾åœ¨è°ƒç”¨å¤„
                     LinuxRecv(pNetSock, pConData);
                 }
                 else if (sockData.mEpollEvents[i].events & EPOLLIN)
@@ -554,10 +554,10 @@ namespace AutoNet
                 }
                 else if (sockData.mEpollEvents[i].events & EPOLLOUT)
                 {
-                    // ²»Ó¦¸Ã×ßµ½ÕâÀï
+                    // ä¸åº”è¯¥èµ°åˆ°è¿™é‡Œ
                     LOGERROR("send error!");
                 }
-                else // ·¢Éú´íÎó
+                else // å‘ç”Ÿé”™è¯¯
                 {
                     LOGERROR("epoll error: %d", errno);
                     /*epoll_ctl(sockData.mEpollFd, EPOLL_CTL_DEL, sockData.mEpollEvents[i].data.fd, &ev);
@@ -577,7 +577,7 @@ namespace AutoNet
             LOGERROR("send error: %d", errno);
             ASSERTN(NULL, FALSE);
         }
-        // TODO ¶ÔÏó³Ø
+        // TODO å¯¹è±¡æ± 
         ConnectionData* pConnectionData = new ConnectionData;
         pConnectionData->m_sock = pNetSock->m_ListenSock;
         pNetSock->OnConnected(pConnectionData);
@@ -586,7 +586,7 @@ namespace AutoNet
 
     BOOL SocketAPI::LinuxSend(ConnectionData* pConData, CHAR* pBuf, DWORD uLen, DWORD& uTransBytes)
     {
-        // ²»ÓÃ¿¼ÂÇ»º³åÇøÒç³öÇé¿ö ÒòÎªlinuxÒç³öºó »áÖ±½Ó¶ª°ü
+        // ä¸ç”¨è€ƒè™‘ç¼“å†²åŒºæº¢å‡ºæƒ…å†µ å› ä¸ºlinuxæº¢å‡ºå ä¼šç›´æ¥ä¸¢åŒ…
         INT nSize = send(pConData->m_sock, pBuf, uLen, 0);
         if (send(pConData->m_sock, pBuf, uLen, 0) < 0)
         {
@@ -615,7 +615,7 @@ namespace AutoNet
             close(pConData->m_sock);
             ASSERTN(NULL, FALSE);
         }
-        else if (nSize == 0) // ¶Ô¶Ë¶Ï¿ªÁ¬½Ó
+        else if (nSize == 0) // å¯¹ç«¯æ–­å¼€è¿æ¥
         {
             LOGERROR("peer shutdown!");
             epoll_event ev;
@@ -635,7 +635,7 @@ namespace AutoNet
         ev.data.fd = pConData->m_sock;
         epoll_ctl(pNetSock->GetSocketData().mEpollFd, EPOLL_CTL_DEL, pConData->m_sock, &ev);
         pConData->CleanUp();
-        // TODO ½«pCondata·ÅÈë¶ÔÏó³Ø
+        // TODO å°†pCondataæ”¾å…¥å¯¹è±¡æ± 
         return TRUE;
     }
 
@@ -651,7 +651,7 @@ namespace AutoNet
             ul = 0;
         return ioctlsocket(sock, SOCK_STREAM, &ul);
 #elif PLATEFORM_TYPE == PLATFORM_LINUX
-        // ÉèÖÃ·Ç×èÈû
+        // è®¾ç½®éé˜»å¡
         INT flags = fcntl(sock, F_GETFL, 0);
         if (bBlocking)
             return fcntl(sock, F_SETFL, flags & ~O_NONBLOCK);

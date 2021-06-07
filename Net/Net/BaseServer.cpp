@@ -19,7 +19,7 @@ namespace AutoNet
 
     BOOL BaseServer::Init()
     {
-        // TODO ¶ÁÈ¡ÅäÖÃ
+        // TODO è¯»å–é…ç½®
         m_strIP = "0.0.0.0";
         if (!m_Socket.Init(this, m_nMaxSessions))
             return FALSE;
@@ -44,12 +44,12 @@ namespace AutoNet
     {
         ASSERTN(pConnectionData, E_NET_INVALID_VALUE);
 
-        // TODO ¶ÔÏó³Ø
+        // TODO å¯¹è±¡æ± 
         Connector* pConnecter = new Connector;
         ASSERTN(pConnecter, E_NET_INVALID_VALUE);
 
         SESSION_ID uID = ++m_nIncrement;
-        // todo ¼ÓËø
+        // todo åŠ é”
         m_mapConnections[uID] = pConnecter;
         pConnecter->Init(uID, pConnectionData);
 
@@ -70,8 +70,8 @@ namespace AutoNet
     {
         ASSERTN(pConnectionData && pMsg, E_NET_INVALID_VALUE);
 
-        // TODO °ÑÊÕµ½µÄÍêÕûµÄbuffer¶ªµ½´¦Àí¶ÓÁĞÖĞ
-        // ¶à¸öÏß³ÌĞ´Èë£¬Ò»¸öÏß³Ì¶ÁÈ¡µÄÈÎÎñ¶ÓÁĞ
+        // TODO æŠŠæ”¶åˆ°çš„å®Œæ•´çš„bufferä¸¢åˆ°å¤„ç†é˜Ÿåˆ—ä¸­
+        // å¤šä¸ªçº¿ç¨‹å†™å…¥ï¼Œä¸€ä¸ªçº¿ç¨‹è¯»å–çš„ä»»åŠ¡é˜Ÿåˆ—
         //m_msgQueue.Produce(pMsg)
         return E_NET_SUC;
     }
@@ -93,10 +93,10 @@ namespace AutoNet
         DWORD uSendedBytes = 0;
         while (true)
         {
-            // ringbuf´¦Àí
+            // ringbufå¤„ç†
             DWORD uToSendSize = pData->m_pSendRingBuf->GetUnReadSize();
 
-            // »º´æÖĞÃ»ÓĞ¿É·¢ËÍÏûÏ¢
+            // ç¼“å­˜ä¸­æ²¡æœ‰å¯å‘é€æ¶ˆæ¯
             if (uToSendSize <= 0)
                 break;
 
@@ -146,15 +146,15 @@ namespace AutoNet
         INT nErr = SocketAPI::GetError();
         switch (eRes)
         {
-        // »º´æÒç³ö
+        // ç¼“å­˜æº¢å‡º
         case AutoNet::E_NET_BUF_OVER_FLOW:
             eHdlRes = Kick((ConnectionData*)pParam);
             break;
-        // ¶Ï¿ªÁ¬½Ó
+        // æ–­å¼€è¿æ¥
         case AutoNet::E_NET_DISCONNECTED:
             eHdlRes = OnDisConnected((ConnectionData*)pParam);
             break;
-        // ·¢ËÍÊ§°Ü
+        // å‘é€å¤±è´¥
         case AutoNet::E_NET_SEND_FAILED:
             eHdlRes = E_NET_SEND_FAILED;
             break;
@@ -176,7 +176,7 @@ namespace AutoNet
         for (auto it = m_mapConnections.begin(); it != m_mapConnections.end(); it++)
         {
             it->second->CleanUp();
-            // TODO ¹é»¹Á¬½Ó³Ø
+            // TODO å½’è¿˜è¿æ¥æ± 
         }
         m_mapConnections.clear();
         m_Socket.CleanUp();

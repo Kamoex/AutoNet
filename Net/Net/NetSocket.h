@@ -44,10 +44,10 @@ namespace AutoNet
         inline SOCKET& GetListenSocket() { return m_ListenSock; }
         inline SocketData& GetSocketData() { return m_sockData; }
     private:
-        SOCKET                      m_ListenSock;               // ¼àÌısocket
-        sockaddr_in                 m_Addr;                     // ¼àÌı¶ËµØÖ·
-        std::vector<HANDLE>         m_vecWorkThread;            // workerÏß³Ì
-        INT                         m_nMaxConnectionsNums;      // ×î´óÁ¬½ÓÊıÁ¿
+        SOCKET                      m_ListenSock;               // ç›‘å¬socket
+        sockaddr_in                 m_Addr;                     // ç›‘å¬ç«¯åœ°å€
+        std::vector<HANDLE>         m_vecWorkThread;            // workerçº¿ç¨‹
+        INT                         m_nMaxConnectionsNums;      // æœ€å¤§è¿æ¥æ•°é‡
         INet*                       m_pNet;
 
     private:

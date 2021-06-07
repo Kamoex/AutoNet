@@ -86,10 +86,10 @@ namespace AutoNet
         DWORD nSendedBytes = 0;
         while(true)
         {
-            // ringbuf´¦Àí
+            // ringbufå¤„ç†
             DWORD dwToSendSize = m_pData->m_pSendRingBuf->GetUnReadSize();
             
-            // »º´æÖĞÃ»ÓĞ¿É·¢ËÍÏûÏ¢
+            // ç¼“å­˜ä¸­æ²¡æœ‰å¯å‘é€æ¶ˆæ¯
             if (dwToSendSize <= 0)
                 break;
 
@@ -130,7 +130,7 @@ namespace AutoNet
         }
         m_pData = pConnectionData;
 
-        // TODO °ÑÊÕµ½µÄÍêÕûµÄbuffer¶ªµ½´¦Àí¶ÓÁĞÖĞ
+        // TODO æŠŠæ”¶åˆ°çš„å®Œæ•´çš„bufferä¸¢åˆ°å¤„ç†é˜Ÿåˆ—ä¸­
 
 
         /*
@@ -143,7 +143,7 @@ namespace AutoNet
 
         while (true)
         {
-            // ¼ì²âÏûÏ¢Í·ÊÇ·ñĞèÒª½âÎö
+            // æ£€æµ‹æ¶ˆæ¯å¤´æ˜¯å¦éœ€è¦è§£æ
             if (nMsgLen == 0)
             {
                 if (!m_pData->m_pRecvRingBuf->Read((CHAR*)m_pData->m_pMsgHead, sizeof(MsgHead)))
@@ -152,11 +152,11 @@ namespace AutoNet
                     m_pData->m_dwSingleMsgRecved -= sizeof(MsgHead);
             }
 
-            // ½ÓÊÕµÄ³¤¶È²»¹» ²»½âÎöÏûÏ¢Ìå
+            // æ¥æ”¶çš„é•¿åº¦ä¸å¤Ÿ ä¸è§£ææ¶ˆæ¯ä½“
             if (m_pData->m_dwSingleMsgRecved < (DWORD)nMsgLen)
                 break;
 
-            // Ã¿¸öConnector¶¼ĞèÒªÓĞ¸öÏûÏ¢¶ÓÁĞ °ÑmsgBody·ÅÈëµ½¶ÓÁĞÖĞ ÏÈÕâÃ´Ğ´ TODO ´ÓÄÚ´æ³ØÀïÉêÇë
+            // æ¯ä¸ªConnectoréƒ½éœ€è¦æœ‰ä¸ªæ¶ˆæ¯é˜Ÿåˆ— æŠŠmsgBodyæ”¾å…¥åˆ°é˜Ÿåˆ—ä¸­ å…ˆè¿™ä¹ˆå†™ TODO ä»å†…å­˜æ± é‡Œç”³è¯·
             CHAR* pMsgBody = new char[nMsgLen];
             if (!m_pData->m_pRecvRingBuf->Read(pMsgBody, nMsgLen))
             {

@@ -95,7 +95,7 @@ namespace AutoNet
             return TRUE;
         }
 
-        // ��ȡһ����ڴ� ���ǲ��ı�ָ��λ��
+        // 读取一块儿内存 但是不改变指针位置
         BOOL Peek(CHAR* pBuf, const DWORD nSize)
         {
             if (!pBuf || nSize == 0)
@@ -122,7 +122,7 @@ namespace AutoNet
             return TRUE;
         }
 
-        // ����ֱ�ӻ�ȡ���ڴ�д������
+        // 用于直接获取了内存写入的情况
         BOOL SkipWrite(DWORD dwSize)
         {
             if (dwSize == 0)

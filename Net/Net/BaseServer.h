@@ -45,8 +45,8 @@ namespace AutoNet
         std::string m_strIP;
         INT  m_nMaxSessions;
         NetSocket                               m_Socket;
-        std::atomic<DWORD>                      m_nIncrement;       // ×ÔÔöID(ÒÔºóÓÅ»¯)
-        std::map<SESSION_ID, Connector*>        m_mapConnections;   // ÒÑÁ¬½ÓµÄsession TODO ¼ÓËø ºóĞøÓÅ»¯³Éhashmap ·ñÔò»áºÜÂı
+        std::atomic<DWORD>                      m_nIncrement;       // è‡ªå¢ID(ä»¥åä¼˜åŒ–)
+        std::map<SESSION_ID, Connector*>        m_mapConnections;   // å·²è¿æ¥çš„session TODO åŠ é” åç»­ä¼˜åŒ–æˆhashmap å¦åˆ™ä¼šå¾ˆæ…¢
         FastSafeQueue<int>                      m_msgQueue;
     };
 }

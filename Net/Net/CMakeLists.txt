@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 add_definitions(-std=c++11)
 
-# support for gdb debugging linuxĞèÒª·Å¿ª×¢ÊÍ winÖ®ËùÒÔ×¢µô ÊÇÎªÁË·ÀÖ¹VSÎŞ·¨µ÷ÊÔ
+# support for gdb debugging linuxéœ€è¦æ”¾å¼€æ³¨é‡Š winä¹‹æ‰€ä»¥æ³¨æ‰ æ˜¯ä¸ºäº†é˜²æ­¢VSæ— æ³•è°ƒè¯•
 # SET(CMAKE_BUILD_TYPE "Debug") 
 # SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 # SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")

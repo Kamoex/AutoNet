@@ -62,7 +62,7 @@ namespace AutoNet
     INT NetSocket::OnAccepted(ConnectionData* pConnectionData)
     {
         ASSERTN(pConnectionData, INVALID_VALUE);
-        // ÖØÖÃÏÂringbuf ÒòÎªacceptµÄÊ±ºòÃ»ÓÐµ÷ÓÃWrite Ö±½ÓÐ´ÈëÁË
+        // é‡ç½®ä¸‹ringbuf å› ä¸ºacceptçš„æ—¶å€™æ²¡æœ‰è°ƒç”¨Write ç›´æŽ¥å†™å…¥äº†
         pConnectionData->m_pRecvRingBuf->Clear();
 
         if (m_pNet->OnAccept(pConnectionData) == E_NET_SUC)
@@ -88,7 +88,7 @@ namespace AutoNet
 
         if (eRes == E_NET_SUC)
         {
-            // ÐÞÕýÐ´ÈëÎ»ÖÃ
+            // ä¿®æ­£å†™å…¥ä½ç½®
             pConnectionData->m_pRecvRingBuf->SkipWrite(pConnectionData->m_dwRecved);
 
             ASSERTNLOG(pConnectionData->m_pMsgHead, INVALID_VALUE, "NetSocket::OnRecved MsgHead is null! session_id: %d", pConnectionData->m_uSessionID);
@@ -97,18 +97,18 @@ namespace AutoNet
 
             while (true)
             {
-                // ¼ì²âÏûÏ¢Í·ÊÇ·ñÐèÒª½âÎö
+                // æ£€æµ‹æ¶ˆæ¯å¤´æ˜¯å¦éœ€è¦è§£æž
                 if (nMsgLen == 0)
                 {
                     if (!pConnectionData->m_pRecvRingBuf->Peek((CHAR*)pConnectionData->m_pMsgHead, sizeof(MsgHead)))
                         break;
                 }
 
-                // ½ÓÊÕµÄ³¤¶È²»¹» ²»½âÎöÏûÏ¢Ìå
+                // æŽ¥æ”¶çš„é•¿åº¦ä¸å¤Ÿ ä¸è§£æžæ¶ˆæ¯ä½“
                 if (pConnectionData->m_dwSingleMsgRecved < (DWORD)nMsgLen)
                     break;
                 
-                // TODO ÄÚ´æ³Ø
+                // TODO å†…å­˜æ± 
                 CHAR* pMsg = new CHAR[nMsgLen];
 
                 if (!pConnectionData->m_pRecvRingBuf->Read(pMsg, nMsgLen))
